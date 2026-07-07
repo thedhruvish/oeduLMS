@@ -1,0 +1,3 @@
+{
+  "extends": "@oedulms/config/tsconfig.base.json"
+}
