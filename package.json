@@ -13,7 +13,6 @@
       "@types/node": "^22.13.14",
       "@cloudflare/workers-types": "^4.20260621.1",
       "better-auth": "1.6.11",
-      "alchemy": "^0.91.2",
       "next-themes": "^0.4.6",
       "react": "^19.2.6",
       "react-dom": "^19.2.6",
@@ -34,6 +33,7 @@
     "db:migrate": "turbo -F @oedulms/db db:migrate",
     "prepare": "husky",
     "lint": "turbo lint",
+    "clean": "find . \\( -type d -name \"node_modules\" -o -type d -name \".turbo\" -o -type d -name \"dist\" -o -type d -name \"dist-dev\" \\) -prune -exec rm -rf '{}' + && echo \"Cleaned up node_modules, .turbo, dist, and dist-dev directories.\"",
     "lint:fix": "turbo lint -- --fix",
     "format": "prettier --write \"**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,css,md}\""

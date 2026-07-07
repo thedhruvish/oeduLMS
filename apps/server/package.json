@@ -4,9 +4,11 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsdown",
+    "dev": "wrangler dev",
     "check-types": "tsc -b",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "lint": "eslint .",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "lint:fix": "eslint --fix ."
   },
   "dependencies": {
@@ -22,7 +24,6 @@
     "@cloudflare/workers-types": "catalog:",
     "@oedulms/config": "workspace:*",
     "@types/node": "catalog:",
-    "alchemy": "catalog:",
     "tsdown": "^0.21.9",
     "typescript": "catalog:",
     "wrangler": "^4.103.0"
