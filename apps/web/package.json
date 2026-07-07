@@ -8,7 +8,7 @@
     "serve": "vite preview",
     "start": "vite",
     "check-types": "vite build && tsc --noEmit",
-    "dev:bare": "vite dev",
+    "dev": "vite dev",
     "lint": "eslint .",
     "lint:fix": "eslint --fix ."
   },
@@ -34,7 +34,6 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "^6.0.1",
-    "alchemy": "catalog:",
     "postcss": "^8.5.10",
     "tailwindcss": "^4.2.2",
     "typescript": "catalog:",

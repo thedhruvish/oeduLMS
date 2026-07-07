@@ -1,7 +1,6 @@
 import js from "@eslint/js";
 import ts from "typescript-eslint";
 import turboPlugin from "eslint-plugin-turbo";
-import prettierConfig from "eslint-config-prettier";
 import globals from "globals";
 
 /**
@@ -40,7 +39,17 @@ export const baseConfig = ts.config(
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**", "bin/**", "build/**", ".next/**", ".turbo/**"],
+    ignores: [
+      "dist/**",
+      ".agents/**",
+      ".wrangler/**",
+      "worker-configuration.d.ts",
+      "node_modules/**",
+      "bin/**",
+      "build/**",
+      ".next/**",
+      ".turbo/**",
+    ],
   }
 );
 

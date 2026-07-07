@@ -1,0 +1,7 @@
+# Ignore artifacts:
+build
+coverage
+.agents
+node_modules
+AGENTS.md
+worker-configuration.d.ts
