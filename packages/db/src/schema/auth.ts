@@ -12,6 +12,8 @@ export const user = pgTable("user", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
+  banAt: timestamp("ban_at"),
+  banReason: text("ban_reason"),
 });
 
 export const session = pgTable(
