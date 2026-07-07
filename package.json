@@ -45,6 +45,8 @@
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@oedulms/config": "workspace:*",
+    "@tanstack/intent": "^0.3.5",
+    "@tanstack/router-plugin": "^1.168.19",
     "@types/node": "catalog:",
     "eslint": "^9.19.0",
     "husky": "^9.1.7",
