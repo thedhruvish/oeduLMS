@@ -1,5 +1,5 @@
 import { createDb } from "@oedulms/db";
-import * as schema from "@oedulms/db/schema/auth";
+import  * as schema from "@oedulms/db/schema/auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 

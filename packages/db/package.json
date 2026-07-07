@@ -1,13 +1,10 @@
 {
   "name": "@oedulms/db",
   "type": "module",
-  "exports": {
-    ".": {
-      "default": "./src/index.ts"
-    },
-    "./*": {
-      "default": "./src/*.ts"
-    }
+ "exports": {
+    ".": "./src/index.ts",
+    "./dzl": "./src/drizzle-t.ts",
+    "./schema/*": "./src/schema/*.ts"
   },
   "scripts": {
     "db:push": "drizzle-kit push",
