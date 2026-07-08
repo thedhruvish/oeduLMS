@@ -14,6 +14,7 @@
   "dependencies": {
     "@oedulms/auth": "workspace:*",
     "@oedulms/db": "workspace:*",
+    "@oedulms/validator": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "evlog": "^2.18.1",

@@ -1,0 +1,16 @@
+{
+  "name": "@oedulms/validator",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@oedulms/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
