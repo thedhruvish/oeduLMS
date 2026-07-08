@@ -4,11 +4,18 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import "../index.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import type { QueryClient } from "@tanstack/react-query";
+import type { AuthContextType } from "@/types/auth";
+import NotFound from "@/components/not-found";
 
-export interface RouterAppContext {}
+export interface RouterAppContext {
+  auth?: AuthContextType;
+  queryClient: QueryClient;
+}
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
+  notFoundComponent: NotFound,
   head: () => ({
     meta: [
       {

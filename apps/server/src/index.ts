@@ -36,32 +36,6 @@ app.use(
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => createAuth().handler(c.req.raw));
 
-app.get("/api/auth/me", async (c) => {
-  const auth = createAuth();
-  const session = await auth.api.getSession({
-    headers: c.req.raw.headers,
-  });
-
-  if (!session) {
-    return c.json({ user: null, role: null }, 401);
-  }
-
-  const db = createDb();
-  const roleRecord = await db
-    .select()
-    .from(userRoles)
-    .where(eq(userRoles.userId, session.user.id))
-    .limit(1);
-
-  const firstRole = roleRecord[0];
-  const role = firstRole ? firstRole.role : "STUDENT";
-
-  return c.json({
-    user: session.user,
-    role: role,
-  });
-});
-
 app.get("/api/me", async (c) => {
   const auth = createAuth();
   const session = await auth.api.getSession({
