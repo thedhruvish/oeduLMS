@@ -106,9 +106,7 @@ export const courseTagRelations = pgTable(
       .notNull()
       .references(() => courseTags.id, { onDelete: "cascade" }),
   },
-  (table) => [
-    primaryKey({ columns: [table.courseId, table.tagId] }),
-  ]
+  (table) => [primaryKey({ columns: [table.courseId, table.tagId] })]
 );
 
 // Relations

@@ -13,8 +13,7 @@ export const courseEnrollments = pgTable("course_enrollments", {
   studentId: text("student_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  paymentId: uuid("payment_id")
-    .references(() => payments.id, { onDelete: "set null" }),
+  paymentId: uuid("payment_id").references(() => payments.id, { onDelete: "set null" }),
   progress: integer("progress").default(0).notNull(), // 0 to 100 percentage
   status: text("status").default("active").notNull(), // active, completed, refunded, etc.
   completedAt: timestamp("completed_at"),

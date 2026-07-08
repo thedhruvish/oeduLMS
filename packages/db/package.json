@@ -1,7 +1,7 @@
 {
   "name": "@oedulms/db",
   "type": "module",
- "exports": {
+  "exports": {
     ".": "./src/index.ts",
     "./dzl": "./src/drizzle-t.ts",
     "./schema/*": "./src/schema/*.ts"

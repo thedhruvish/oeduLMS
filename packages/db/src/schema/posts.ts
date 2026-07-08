@@ -42,9 +42,7 @@ export const postLikes = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
   },
-  (table) => [
-    primaryKey({ columns: [table.postId, table.userId] }),
-  ]
+  (table) => [primaryKey({ columns: [table.postId, table.userId] })]
 );
 
 // Relations

@@ -13,9 +13,7 @@ export const userRoles = pgTable(
     role: text("role").$type<"STUDENT" | "TEACHER">().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [
-    uniqueIndex("user_roles_user_id_role_idx").on(table.userId, table.role),
-  ]
+  (table) => [uniqueIndex("user_roles_user_id_role_idx").on(table.userId, table.role)]
 );
 
 // 2. Student Profile Table

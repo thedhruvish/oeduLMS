@@ -1,5 +1,14 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, uuid, integer, jsonb, primaryKey } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  uuid,
+  integer,
+  jsonb,
+  primaryKey,
+} from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { courseLectures } from "./courses";
 import { attachments } from "./attachments";
@@ -15,8 +24,7 @@ export const lectureComments = pgTable("lecture_comments", {
     .references(() => user.id, { onDelete: "cascade" }),
   parentId: uuid("parent_id"), // self-reference
   content: text("content").notNull(),
-  attachmentId: uuid("attachment_id")
-    .references(() => attachments.id, { onDelete: "set null" }),
+  attachmentId: uuid("attachment_id").references(() => attachments.id, { onDelete: "set null" }),
   isEdited: boolean("is_edited").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
@@ -38,9 +46,7 @@ export const lectureCommentReactions = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     reaction: text("reaction").notNull(), // LIKE, HEART, etc.
   },
-  (table) => [
-    primaryKey({ columns: [table.commentId, table.userId] }),
-  ]
+  (table) => [primaryKey({ columns: [table.commentId, table.userId] })]
 );
 
 // 3. Lecture Questions (Q&A) Table
@@ -54,8 +60,7 @@ export const lectureQuestions = pgTable("lecture_questions", {
     .references(() => user.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   description: jsonb("description").notNull(), // Rich Text JSON
-  attachmentId: uuid("attachment_id")
-    .references(() => attachments.id, { onDelete: "set null" }),
+  attachmentId: uuid("attachment_id").references(() => attachments.id, { onDelete: "set null" }),
   status: text("status").default("open").notNull(), // open, resolved, etc.
   viewsCount: integer("views_count").default(0).notNull(),
   answersCount: integer("answers_count").default(0).notNull(),
@@ -78,8 +83,7 @@ export const lectureQuestionAnswers = pgTable("lecture_question_answers", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   content: jsonb("content").notNull(), // Rich Text JSON
-  attachmentId: uuid("attachment_id")
-    .references(() => attachments.id, { onDelete: "set null" }),
+  attachmentId: uuid("attachment_id").references(() => attachments.id, { onDelete: "set null" }),
   isInstructorAnswer: boolean("is_instructor_answer").default(false).notNull(),
   isAccepted: boolean("is_accepted").default(false).notNull(),
   upvotes: integer("upvotes").default(0).notNull(),
@@ -103,9 +107,7 @@ export const lectureQuestionAnswerReactions = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     reaction: text("reaction").notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.answerId, table.userId] }),
-  ]
+  (table) => [primaryKey({ columns: [table.answerId, table.userId] })]
 );
 
 // Relations
@@ -164,29 +166,35 @@ export const lectureQuestionsRelations = relations(lectureQuestions, ({ one, man
   }),
 }));
 
-export const lectureQuestionAnswersRelations = relations(lectureQuestionAnswers, ({ one, many }) => ({
-  question: one(lectureQuestions, {
-    fields: [lectureQuestionAnswers.questionId],
-    references: [lectureQuestions.id],
-  }),
-  user: one(user, {
-    fields: [lectureQuestionAnswers.userId],
-    references: [user.id],
-  }),
-  attachment: one(attachments, {
-    fields: [lectureQuestionAnswers.attachmentId],
-    references: [attachments.id],
-  }),
-  reactions: many(lectureQuestionAnswerReactions),
-}));
+export const lectureQuestionAnswersRelations = relations(
+  lectureQuestionAnswers,
+  ({ one, many }) => ({
+    question: one(lectureQuestions, {
+      fields: [lectureQuestionAnswers.questionId],
+      references: [lectureQuestions.id],
+    }),
+    user: one(user, {
+      fields: [lectureQuestionAnswers.userId],
+      references: [user.id],
+    }),
+    attachment: one(attachments, {
+      fields: [lectureQuestionAnswers.attachmentId],
+      references: [attachments.id],
+    }),
+    reactions: many(lectureQuestionAnswerReactions),
+  })
+);
 
-export const lectureQuestionAnswerReactionsRelations = relations(lectureQuestionAnswerReactions, ({ one }) => ({
-  answer: one(lectureQuestionAnswers, {
-    fields: [lectureQuestionAnswerReactions.answerId],
-    references: [lectureQuestionAnswers.id],
-  }),
-  user: one(user, {
-    fields: [lectureQuestionAnswerReactions.userId],
-    references: [user.id],
-  }),
-}));
+export const lectureQuestionAnswerReactionsRelations = relations(
+  lectureQuestionAnswerReactions,
+  ({ one }) => ({
+    answer: one(lectureQuestionAnswers, {
+      fields: [lectureQuestionAnswerReactions.answerId],
+      references: [lectureQuestionAnswers.id],
+    }),
+    user: one(user, {
+      fields: [lectureQuestionAnswerReactions.userId],
+      references: [user.id],
+    }),
+  })
+);

@@ -19,8 +19,7 @@ export const coupons = pgTable("coupons", {
   usageLimit: integer("usage_limit"), // Total allowed uses
   usedCount: integer("used_count").default(0).notNull(), // Current usage count
   isActive: boolean("is_active").default(true).notNull(),
-  createdBy: text("created_by")
-    .references(() => user.id, { onDelete: "set null" }),
+  createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -39,9 +38,7 @@ export const couponCourses = pgTable(
       .notNull()
       .references(() => courses.id, { onDelete: "cascade" }),
   },
-  (table) => [
-    primaryKey({ columns: [table.couponId, table.courseId] }),
-  ]
+  (table) => [primaryKey({ columns: [table.couponId, table.courseId] })]
 );
 
 // 3. Coupon Redemptions Table (Usage tracking)
@@ -53,8 +50,7 @@ export const couponRedemptions = pgTable("coupon_redemptions", {
   studentId: text("student_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  paymentId: uuid("payment_id")
-    .references(() => payments.id, { onDelete: "set null" }),
+  paymentId: uuid("payment_id").references(() => payments.id, { onDelete: "set null" }),
   discountAmount: integer("discount_amount").notNull(), // The actual discount amount applied
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
