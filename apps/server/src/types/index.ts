@@ -12,7 +12,9 @@ export interface SessionUser {
 }
 
 // Merged Hono type — merges evlog's log variable with our own app variables
+// Bindings maps to the Cloudflare Worker env interface (wrangler-generated CloudflareBindings)
 export type AppVariables = {
+  Bindings: CloudflareBindings;
   Variables: EvlogVariables["Variables"] & {
     sessionUser: SessionUser;
     userRole: "STUDENT" | "TEACHER";

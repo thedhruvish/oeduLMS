@@ -6,20 +6,9 @@ import { eq } from "@oedulms/db/dzl";
 import { zValidator } from "@hono/zod-validator";
 import { courseSchema } from "@oedulms/validator";
 import type { AppVariables } from "../types";
+import { slugify } from "@/utils/slugify";
 
 export const adminCoursesRouter = new Hono<AppVariables>();
-
-function slugify(text: string): string {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w-]+/g, "")
-    .replace(/--+/g, "-")
-    .replace(/^-+/, "")
-    .replace(/-+$/, "");
-}
 
 /**
  * Resolve (or auto-create) instructor profile ID from the auth user ID.

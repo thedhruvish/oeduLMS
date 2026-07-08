@@ -12,6 +12,8 @@
     "lint:fix": "eslint --fix ."
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1081.0",
+    "@aws-sdk/s3-request-presigner": "^3.1081.0",
     "@hono/zod-validator": "^0.8.0",
     "@oedulms/auth": "workspace:*",
     "@oedulms/db": "workspace:*",
