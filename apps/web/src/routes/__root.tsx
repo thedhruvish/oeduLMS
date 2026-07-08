@@ -1,3 +1,4 @@
+import { TooltipProvider } from "@oedulms/ui/components/tooltip";
 import { Toaster } from "@oedulms/ui/components/sonner";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
@@ -45,8 +46,10 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <Outlet />
-        <Toaster richColors />
+        <TooltipProvider>
+          <Outlet />
+          <Toaster richColors />
+        </TooltipProvider>
       </ThemeProvider>
       <TanStackRouterDevtools position="bottom-left" />
     </>
