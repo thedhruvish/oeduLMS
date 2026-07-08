@@ -5,3 +5,7 @@ export const coursesKeys = {
   details: () => [...coursesKeys.all, "detail"] as const,
   detail: (id: string) => [...coursesKeys.details(), id] as const,
 };
+export const curriculumKeys = {
+  all: ["curriculum"] as const,
+  course: (courseId: string) => [...curriculumKeys.all, "course", courseId] as const,
+};

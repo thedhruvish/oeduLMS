@@ -1,9 +1,11 @@
+import * as React from "react";
 import { createFileRoute, redirect, Outlet, useLocation } from "@tanstack/react-router";
 import { SidebarProvider, SidebarInset } from "@oedulms/ui/components/sidebar";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { AdminHeaderActions } from "@/components/admin-header-actions";
 import { authQueryOptions } from "@/api/auth";
+import { useUploadStore } from "@/store/upload-store";
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: async ({ context }) => {
@@ -20,6 +22,20 @@ export const Route = createFileRoute("/admin")({
 
 function AdminLayout() {
   const location = useLocation();
+  const isUploadingAny = useUploadStore((state) => state.isUploadingAny());
+
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isUploadingAny) {
+        e.preventDefault();
+        e.returnValue =
+          "Active uploads are in progress. If you leave or refresh, S3 file uploads will be aborted.";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isUploadingAny]);
 
   const getPageTitle = () => {
     const path = location.pathname;

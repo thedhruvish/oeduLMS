@@ -117,14 +117,27 @@ function AdminCoursesListComponent() {
                       size="icon"
                       variant="ghost"
                       className="size-8"
+                      title="View Details"
                     >
                       <Eye className="size-4" />
+                    </Button>
+                    <Button
+                      render={
+                        <Link to="/admin/courses/$id/curriculum" params={{ id: course.id }} />
+                      }
+                      size="icon"
+                      variant="ghost"
+                      className="size-8 text-primary hover:bg-primary/10 hover:text-primary"
+                      title="Manage Curriculum"
+                    >
+                      <BookOpen className="size-4" />
                     </Button>
                     <Button
                       render={<Link to="/admin/courses/$id/edit" params={{ id: course.id }} />}
                       size="icon"
                       variant="ghost"
                       className="size-8"
+                      title="Edit Details"
                     >
                       <Edit2 className="size-4" />
                     </Button>

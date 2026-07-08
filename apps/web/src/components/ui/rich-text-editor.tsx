@@ -39,18 +39,32 @@ import {
 } from "lucide-react";
 import { cn } from "@oedulms/ui/lib/utils";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-class LexicalErrorBoundary extends React.Component<any, any> {
-  state = { hasError: false, error: null };
+interface LexicalErrorBoundaryProps {
+  children: React.JSX.Element;
+  fallback?: (error: Error) => React.ReactNode;
+  onError: (error: Error) => void;
+}
+
+interface LexicalErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class LexicalErrorBoundary extends React.Component<
+  LexicalErrorBoundaryProps,
+  LexicalErrorBoundaryState
+> {
+  override state: LexicalErrorBoundaryState = { hasError: false, error: null };
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
-  componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error) {
     console.error("Lexical editor crashed:", error);
+    this.props.onError(error);
   }
-  render() {
+  override render() {
     if (this.state.hasError && this.state.error) {
-      return this.props.fallback(this.state.error);
+      return this.props.fallback ? this.props.fallback(this.state.error) : null;
     }
     return this.props.children;
   }
@@ -265,7 +279,7 @@ function InitialContentPlugin({ value }: { value: string }) {
       const parser = new DOMParser();
       const dom = parser.parseFromString(value || "<p></p>", "text/html");
       const nodes = $generateNodesFromDOM(editor, dom);
-      
+
       const root = $getRoot();
       root.clear();
       root.append(...nodes);

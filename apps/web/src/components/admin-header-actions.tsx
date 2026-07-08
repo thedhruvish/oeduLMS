@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { toast } from "sonner";
+import { UploadsHeaderIndicator } from "@/components/ui/uploads-header-indicator";
 
 import {
   DropdownMenu,
@@ -22,6 +23,7 @@ import {
 import { Avatar, AvatarFallback } from "@oedulms/ui/components/avatar";
 import { Popover, PopoverTrigger, PopoverContent } from "@oedulms/ui/components/popover";
 import { Button } from "@oedulms/ui/components/button";
+import { ScrollArea } from "@oedulms/ui/components/scroll-area";
 import {
   CommandDialog,
   CommandInput,
@@ -110,6 +112,9 @@ export function AdminHeaderActions() {
         <Search className="size-4" />
       </Button>
 
+      {/* Uploads Indicator */}
+      <UploadsHeaderIndicator />
+
       {/* Notification Bell */}
       <Popover>
         <PopoverTrigger
@@ -131,15 +136,20 @@ export function AdminHeaderActions() {
               Mark all as read
             </span>
           </div>
-          <div className="max-h-64 overflow-y-auto divide-y">
-            {notifications.map((notif) => (
-              <div key={notif.id} className="p-4 hover:bg-muted/50 transition flex flex-col gap-1">
-                <span className="text-xs font-semibold">{notif.title}</span>
-                <span className="text-xs text-muted-foreground">{notif.description}</span>
-                <span className="text-[10px] text-muted-foreground/60 mt-1">{notif.time}</span>
-              </div>
-            ))}
-          </div>
+          <ScrollArea className="max-h-64">
+            <div className="divide-y">
+              {notifications.map((notif) => (
+                <div
+                  key={notif.id}
+                  className="p-4 hover:bg-muted/50 transition flex flex-col gap-1"
+                >
+                  <span className="text-xs font-semibold">{notif.title}</span>
+                  <span className="text-xs text-muted-foreground">{notif.description}</span>
+                  <span className="text-[10px] text-muted-foreground/60 mt-1">{notif.time}</span>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
         </PopoverContent>
       </Popover>
 

@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import {  Plus, Trash2, ChevronDown, ChevronUp, HelpCircle, Info } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronUp, HelpCircle, Info } from "lucide-react";
 import * as React from "react";
 
 import { courseSchema, type CourseInput, type FaqInput } from "@oedulms/validator";
@@ -19,7 +19,13 @@ import { FormError } from "@/components/ui/form-error";
 import { ScrollArea } from "@oedulms/ui/components/scroll-area";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Card, CardHeader, CardTitle, CardContent } from "@oedulms/ui/components/card";
-import { Popover, PopoverTrigger, PopoverContent, PopoverTitle } from "@oedulms/ui/components/popover";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverTitle,
+} from "@oedulms/ui/components/popover";
+import { MediaUploader } from "@/components/ui/media-uploader";
 
 interface CourseFormProps {
   defaultValues?: CourseInput;
@@ -48,12 +54,12 @@ const DEFAULT_VALUES: CourseInput = {
   faqs: [],
 };
 
-interface DurationEstimatorProps {
+export interface DurationEstimatorProps {
   onApply: (seconds: number) => void;
   currentSeconds: number;
 }
 
-function DurationEstimator({ onApply, currentSeconds }: DurationEstimatorProps) {
+export function DurationEstimator({ onApply, currentSeconds }: DurationEstimatorProps) {
   const currentHours = Math.floor(currentSeconds / 3600);
   const currentMins = Math.floor((currentSeconds % 3600) / 60);
 
@@ -66,7 +72,7 @@ function DurationEstimator({ onApply, currentSeconds }: DurationEstimatorProps) 
   }, [currentSeconds]);
 
   const handleApply = () => {
-    const totalSeconds = (hours * 3600) + (mins * 60);
+    const totalSeconds = hours * 3600 + mins * 60;
     onApply(totalSeconds);
   };
 
@@ -111,14 +117,9 @@ function DurationEstimator({ onApply, currentSeconds }: DurationEstimatorProps) 
           </div>
         </div>
         <div className="text-[10px] text-muted-foreground italic">
-          Calculates to: {((hours * 3600) + (mins * 60)).toLocaleString()} seconds
+          Calculates to: {(hours * 3600 + mins * 60).toLocaleString()} seconds
         </div>
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleApply}
-          className="w-full text-xs h-7"
-        >
+        <Button type="button" size="sm" onClick={handleApply} className="w-full text-xs h-7">
           Apply Estimate
         </Button>
       </PopoverContent>
@@ -144,7 +145,8 @@ function LecturesInfo() {
           Lectures Info
         </PopoverTitle>
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Provide an estimated number of total lectures. This helps set student expectations in the course brochure.
+          Provide an estimated number of total lectures. This helps set student expectations in the
+          course brochure.
         </p>
       </PopoverContent>
     </Popover>
@@ -243,20 +245,18 @@ export function CourseForm({
               }}
             </form.Field>
 
-            {/* Thumbnail Image URL */}
+            {/* Thumbnail Image */}
             <form.Field name="thumbnail">
               {(field) => {
                 const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid}>
-                    <FieldLabel htmlFor={field.name}>Thumbnail Image URL</FieldLabel>
-                    <Input
-                      id={field.name}
-                      placeholder="https://example.com/thumbnail.png"
-                      value={field.state.value || ""}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      disabled={isPending}
+                    <FieldLabel htmlFor={field.name}>Thumbnail Image</FieldLabel>
+                    <MediaUploader
+                      value={field.state.value}
+                      onChange={(url) => field.handleChange(url)}
+                      acceptType="image"
+                      directory="thumbnails"
                     />
                     <FormError isInvalid={isInvalid} errors={field.state.meta.errors} />
                   </Field>
@@ -264,20 +264,18 @@ export function CourseForm({
               }}
             </form.Field>
 
-            {/* Trailer Video URL */}
+            {/* Trailer Video */}
             <form.Field name="trailerVideo">
               {(field) => {
                 const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid}>
-                    <FieldLabel htmlFor={field.name}>Trailer Video URL</FieldLabel>
-                    <Input
-                      id={field.name}
-                      placeholder="https://example.com/trailer.mp4"
-                      value={field.state.value || ""}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      disabled={isPending}
+                    <FieldLabel htmlFor={field.name}>Trailer Video</FieldLabel>
+                    <MediaUploader
+                      value={field.state.value}
+                      onChange={(url) => field.handleChange(url)}
+                      acceptType="video"
+                      directory="trailers"
                     />
                     <FormError isInvalid={isInvalid} errors={field.state.meta.errors} />
                   </Field>
@@ -437,7 +435,9 @@ export function CourseForm({
                 {(field) => (
                   <Field>
                     <div className="flex items-center gap-1.5 mb-1">
-                      <FieldLabel htmlFor={field.name} className="!mb-0">Duration (sec)</FieldLabel>
+                      <FieldLabel htmlFor={field.name} className="!mb-0">
+                        Duration (sec)
+                      </FieldLabel>
                       <DurationEstimator
                         currentSeconds={field.state.value}
                         onApply={(val) => field.handleChange(val)}
@@ -462,7 +462,9 @@ export function CourseForm({
                 {(field) => (
                   <Field>
                     <div className="flex items-center gap-1.5 mb-1">
-                      <FieldLabel htmlFor={field.name} className="!mb-0">Lectures Count</FieldLabel>
+                      <FieldLabel htmlFor={field.name} className="!mb-0">
+                        Lectures Count
+                      </FieldLabel>
                       <LecturesInfo />
                     </div>
                     <Input
@@ -571,7 +573,10 @@ export function CourseForm({
                       )}
 
                       {faqs.map((faq, index) => (
-                        <Card key={index} className="border bg-card shadow-sm rounded-lg overflow-hidden flex flex-col gap-0 py-0">
+                        <Card
+                          key={index}
+                          className="border bg-card shadow-sm rounded-lg overflow-hidden flex flex-col gap-0 py-0"
+                        >
                           <CardHeader className="flex flex-row items-center justify-between border-b pb-3 pt-4 px-4 bg-muted/10">
                             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                               FAQ #{index + 1}

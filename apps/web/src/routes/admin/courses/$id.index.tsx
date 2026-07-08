@@ -67,7 +67,7 @@ function AdminCourseDetailComponent() {
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      <div className="flex justify-between items-center flex-wrap gap-4">
+      <div className="flex justify-between items-center flex-wrap gap-4 shrink-0">
         <div className="flex items-center gap-4">
           <Button
             render={<Link to="/admin/courses" />}
@@ -79,10 +79,23 @@ function AdminCourseDetailComponent() {
           </Button>
           <h2 className="text-xl font-bold truncate max-w-lg">{course.title}</h2>
         </div>
-        <Button render={<Link to="/admin/courses/$id/edit" params={{ id: course.id }} />} size="sm">
-          <Edit className="size-4" data-icon="inline-start" />
-          Edit Details
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            render={<Link to="/admin/courses/$id/curriculum" params={{ id: course.id }} />}
+            variant="outline"
+            size="sm"
+          >
+            <BookOpen className="size-4" data-icon="inline-start" />
+            Manage Curriculum
+          </Button>
+          <Button
+            render={<Link to="/admin/courses/$id/edit" params={{ id: course.id }} />}
+            size="sm"
+          >
+            <Edit className="size-4" data-icon="inline-start" />
+            Edit Details
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
