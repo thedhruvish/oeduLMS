@@ -13,6 +13,10 @@
     "lint:fix": "eslint --fix ."
   },
   "dependencies": {
+    "@lexical/html": "^0.46.0",
+    "@lexical/react": "^0.46.0",
+    "@lexical/rich-text": "^0.46.0",
+    "@lexical/selection": "^0.46.0",
     "@oedulms/ui": "workspace:*",
     "@oedulms/validator": "workspace:*",
     "@tailwindcss/vite": "^4.2.2",
@@ -22,6 +26,7 @@
     "axios": "^1.18.1",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
+    "lexical": "^0.46.0",
     "lucide-react": "^1.8.0",
     "motion": "^12.42.2",
     "next-themes": "catalog:",

@@ -9,7 +9,7 @@ function AdminIndexComponent() {
   const user = useAuthStore((state) => state.user);
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
+    <div className="flex flex-col gap-6 w-full">
       <div className="p-6 bg-card border rounded-lg flex flex-col gap-4">
         <h2 className="text-xl font-bold">Welcome back, {user?.name}!</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">

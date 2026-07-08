@@ -12,6 +12,7 @@
     "lint:fix": "eslint --fix ."
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.8.0",
     "@oedulms/auth": "workspace:*",
     "@oedulms/db": "workspace:*",
     "@oedulms/validator": "workspace:*",

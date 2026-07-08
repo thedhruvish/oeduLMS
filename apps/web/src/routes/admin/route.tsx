@@ -32,14 +32,14 @@ function AdminLayout() {
   return (
     <SidebarProvider>
       <AdminSidebar />
-      <SidebarInset>
+      <SidebarInset className="h-screen overflow-hidden flex flex-col">
         <header className="flex h-16 shrink-0 items-center gap-4 border-b px-6 justify-between bg-card">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-foreground">{getPageTitle()}</span>
           </div>
           <AdminHeaderActions />
         </header>
-        <main className="flex-1 overflow-y-auto p-6 bg-background">
+        <main className="flex-1 p-6 bg-background overflow-hidden flex flex-col">
           <Outlet />
         </main>
       </SidebarInset>
