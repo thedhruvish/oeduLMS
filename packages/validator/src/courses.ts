@@ -43,3 +43,25 @@ export const courseSchema = z.object({
 export type CourseInput = z.infer<typeof courseSchema>;
 export type CreateCourseInput = CourseInput;
 export type UpdateCourseInput = Partial<CourseInput>;
+
+export const sectionSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters").max(100),
+  description: z.string().optional().nullable(),
+  position: z.number().int().min(0).optional(),
+  isPublished: z.boolean(),
+});
+
+export type SectionInput = z.infer<typeof sectionSchema>;
+
+export const lectureSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters").max(100),
+  description: z.string().optional().nullable(),
+  videoUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
+  thumbnail: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
+  duration: z.number().int().min(0),
+  isPreview: z.boolean(),
+  isPublished: z.boolean(),
+  position: z.number().int().min(0).optional(),
+});
+
+export type LectureInput = z.infer<typeof lectureSchema>;

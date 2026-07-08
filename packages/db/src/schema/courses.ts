@@ -41,6 +41,7 @@ export const courseSections = pgTable("course_sections", {
   title: text("title").notNull(),
   description: text("description"),
   position: integer("position").notNull(),
+  isPublished: boolean("is_published").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -57,6 +58,7 @@ export const courseLectures = pgTable("course_lectures", {
   thumbnail: text("thumbnail"),
   duration: integer("duration").default(0).notNull(), // duration in seconds
   isPreview: boolean("is_preview").default(false).notNull(),
+  isPublished: boolean("is_published").default(false).notNull(),
   position: integer("position").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
