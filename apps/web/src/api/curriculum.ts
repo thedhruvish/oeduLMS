@@ -13,7 +13,10 @@ export interface Lecture {
   thumbnail: string | null;
   duration: number;
   isPreview: boolean;
-  isPublished: boolean;
+  publishMode: "AFTER_TRANSCODE" | "SCHEDULED" | "DRAFT";
+  publishedAt: string | null;
+  qualities: string[];
+  resources: { id?: string; title: string; type: string; url: string; size?: number | null }[];
   position: number;
   createdAt: string;
 }
@@ -24,7 +27,8 @@ export interface Section {
   title: string;
   description: string | null;
   position: number;
-  isPublished: boolean;
+  publishMode: "AFTER_TRANSCODE" | "SCHEDULED" | "DRAFT";
+  publishedAt: string | null;
   createdAt: string;
   lectures: Lecture[];
 }
@@ -93,6 +97,13 @@ export function useUpdateSection(courseId: string) {
               return {
                 ...section,
                 ...values,
+                publishMode: values.publishMode ?? section.publishMode,
+                publishedAt:
+                  values.publishedAt === undefined
+                    ? section.publishedAt
+                    : values.publishedAt instanceof Date
+                      ? values.publishedAt.toISOString()
+                      : values.publishedAt || null,
                 description:
                   values.description === undefined
                     ? section.description
@@ -217,6 +228,17 @@ export function useUpdateLecture(courseId: string) {
                     return {
                       ...lecture,
                       ...values,
+                      publishMode: values.publishMode ?? lecture.publishMode,
+                      publishedAt:
+                        values.publishedAt === undefined
+                          ? lecture.publishedAt
+                          : values.publishedAt instanceof Date
+                            ? values.publishedAt.toISOString()
+                            : values.publishedAt || null,
+                      duration: values.duration ?? lecture.duration,
+                      isPreview: values.isPreview ?? lecture.isPreview,
+                      qualities: values.qualities ?? lecture.qualities,
+                      resources: values.resources ?? lecture.resources,
                       description:
                         values.description === undefined
                           ? lecture.description
@@ -227,7 +249,7 @@ export function useUpdateLecture(courseId: string) {
                         values.thumbnail === undefined
                           ? lecture.thumbnail
                           : values.thumbnail || null,
-                    };
+                    } as Lecture;
                   }
                   return lecture;
                 }),

@@ -1,6 +1,18 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, uuid, integer, primaryKey } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  uuid,
+  integer,
+  primaryKey,
+  jsonb,
+  pgEnum,
+} from "drizzle-orm/pg-core";
 import { instructorProfiles } from "./profiles";
+
+export const publishModeEnum = pgEnum("publish_mode", ["AFTER_TRANSCODE", "SCHEDULED", "DRAFT"]);
 
 // 1. Courses Table
 export const courses = pgTable("courses", {
@@ -41,7 +53,8 @@ export const courseSections = pgTable("course_sections", {
   title: text("title").notNull(),
   description: text("description"),
   position: integer("position").notNull(),
-  isPublished: boolean("is_published").default(false).notNull(),
+  publishMode: publishModeEnum("publish_mode").default("AFTER_TRANSCODE").notNull(),
+  publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -58,7 +71,9 @@ export const courseLectures = pgTable("course_lectures", {
   thumbnail: text("thumbnail"),
   duration: integer("duration").default(0).notNull(), // duration in seconds
   isPreview: boolean("is_preview").default(false).notNull(),
-  isPublished: boolean("is_published").default(false).notNull(),
+  publishedAt: timestamp("published_at"),
+  publishMode: publishModeEnum("publish_mode").default("AFTER_TRANSCODE").notNull(),
+  qualities: jsonb("qualities").$type<string[]>().default([]).notNull(),
   position: integer("position").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

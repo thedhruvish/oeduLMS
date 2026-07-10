@@ -48,7 +48,11 @@ export const sectionSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100),
   description: z.string().optional().nullable(),
   position: z.number().int().min(0).optional(),
-  isPublished: z.boolean(),
+  publishMode: z
+    .enum(["AFTER_TRANSCODE", "SCHEDULED", "DRAFT"])
+    .optional()
+    .default("AFTER_TRANSCODE"),
+  publishedAt: z.union([z.string(), z.date()]).optional().nullable(),
 });
 
 export type SectionInput = z.infer<typeof sectionSchema>;
@@ -56,11 +60,28 @@ export type SectionInput = z.infer<typeof sectionSchema>;
 export const lectureSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100),
   description: z.string().optional().nullable(),
-  videoUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
-  thumbnail: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
-  duration: z.number().int().min(0),
-  isPreview: z.boolean(),
-  isPublished: z.boolean(),
+  videoUrl: z.url("Must be a valid URL").optional().or(z.literal("")).nullable(),
+  thumbnail: z.url("Must be a valid URL").optional().or(z.literal("")).nullable(),
+  duration: z.number().int().min(0).optional().default(0),
+  isPreview: z.boolean().optional().default(false),
+  publishMode: z
+    .enum(["AFTER_TRANSCODE", "SCHEDULED", "DRAFT"])
+    .optional()
+    .default("AFTER_TRANSCODE"),
+  publishedAt: z.union([z.string(), z.date()]).optional().nullable(),
+  qualities: z.array(z.string()).optional().default([]),
+  resources: z
+    .array(
+      z.object({
+        id: z.uuid().optional(),
+        title: z.string(),
+        type: z.string(),
+        url: z.url(),
+        size: z.number().optional().nullable(),
+      })
+    )
+    .optional()
+    .default([]),
   position: z.number().int().min(0).optional(),
 });
 

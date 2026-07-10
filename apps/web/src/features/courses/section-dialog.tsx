@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useForm } from "@tanstack/react-form";
-import { sectionSchema, type SectionInput } from "@oedulms/validator/courses";
+import { type SectionInput } from "@oedulms/validator/courses";
 import {
   Dialog,
   DialogContent,
@@ -12,12 +12,13 @@ import {
 import { Field, FieldLabel } from "@oedulms/ui/components/field";
 import { Input } from "@oedulms/ui/components/input";
 import { Textarea } from "@oedulms/ui/components/textarea";
-import { Switch } from "@oedulms/ui/components/switch";
 import { Button } from "@oedulms/ui/components/button";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { FormError } from "@/components/ui/form-error";
 import { useCreateSection, useUpdateSection, type Section } from "@/api/curriculum";
+import { cn } from "@oedulms/ui/lib/utils";
+import { DatePickerTime } from "@/components/ui/date-picker-time";
 
 interface SectionDialogProps {
   open: boolean;
@@ -41,21 +42,30 @@ export function SectionDialog({
     defaultValues: {
       title: "",
       description: "",
-      isPublished: false,
+      publishMode: "AFTER_TRANSCODE",
+      publishedAt: null,
     } as SectionInput,
-    validators: {
-      onChange: sectionSchema,
-    },
     onSubmit: async ({ value }) => {
+      if (!value.title || value.title.trim().length < 3) {
+        toast.error("Title must be at least 3 characters");
+        return;
+      }
       try {
+        const payload: SectionInput = {
+          title: value.title,
+          description: value.description || null,
+          publishMode: value.publishMode,
+          publishedAt: value.publishedAt || null,
+        };
+
         if (editingSection) {
           await updateSection.mutateAsync({
             id: editingSection.id,
-            values: value,
+            values: payload,
           });
           toast.success("Section updated successfully!");
         } else {
-          await createSection.mutateAsync(value);
+          await createSection.mutateAsync(payload);
           toast.success("Section created successfully!");
         }
         if (onSuccess) onSuccess();
@@ -72,7 +82,8 @@ export function SectionDialog({
       sectionForm.reset({
         title: editingSection?.title || "",
         description: editingSection?.description || "",
-        isPublished: editingSection?.isPublished || false,
+        publishMode: editingSection?.publishMode || "AFTER_TRANSCODE",
+        publishedAt: editingSection?.publishedAt || null,
       });
     }
   }, [open, editingSection]);
@@ -92,9 +103,18 @@ export function SectionDialog({
           }}
           className="flex flex-col gap-4 py-2"
         >
-          <sectionForm.Field name="title">
+          <sectionForm.Field
+            name="title"
+            validators={{
+              onBlur: ({ value }) => {
+                if (!value || value.trim().length < 3) {
+                  return "Title must be at least 3 characters";
+                }
+              },
+            }}
+          >
             {(field) => {
-              const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+              const isInvalid = field.state.meta.errors.length > 0;
               return (
                 <Field data-invalid={isInvalid}>
                   <FieldLabel htmlFor={field.name}>Section Title</FieldLabel>
@@ -135,28 +155,102 @@ export function SectionDialog({
             }}
           </sectionForm.Field>
 
-          <sectionForm.Field name="isPublished">
-            {(field) => (
-              <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
-                <div className="flex flex-col gap-0.5">
-                  <label
-                    htmlFor={field.name}
-                    className="text-xs font-semibold text-foreground select-none cursor-pointer"
-                  >
-                    Publish Section
-                  </label>
-                  <span className="text-[10px] text-muted-foreground">
-                    Make this section visible to students immediately.
-                  </span>
-                </div>
-                <Switch
-                  id={field.name}
-                  name={field.name}
-                  checked={field.state.value}
-                  onCheckedChange={(checked) => field.handleChange(checked)}
-                />
-              </div>
-            )}
+          <sectionForm.Field name="publishMode">
+            {(fieldMode) => {
+              const publishMode = fieldMode.state.value;
+
+              return (
+                <sectionForm.Field name="publishedAt">
+                  {(fieldDate) => {
+                    const publishedAt = fieldDate.state.value;
+
+                    return (
+                      <div className="flex flex-col gap-3 border rounded-lg p-4 bg-muted/10">
+                        <label className="text-xs font-semibold text-foreground">
+                          Publish Options
+                        </label>
+                        <div className="flex flex-col gap-2">
+                          <div
+                            className={cn(
+                              "flex items-center gap-3 border rounded-lg p-2.5 cursor-pointer hover:bg-muted/10 transition",
+                              publishMode === "AFTER_TRANSCODE" && "border-primary bg-primary/5"
+                            )}
+                            onClick={() => {
+                              fieldMode.handleChange("AFTER_TRANSCODE");
+                              fieldDate.handleChange(null);
+                            }}
+                          >
+                            <div className="size-3.5 rounded-full border border-primary flex items-center justify-center shrink-0">
+                              {publishMode === "AFTER_TRANSCODE" && (
+                                <div className="size-2 rounded-full bg-primary" />
+                              )}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold">Publish Immediately</span>
+                            </div>
+                          </div>
+
+                          <div
+                            className={cn(
+                              "flex items-center gap-3 border rounded-lg p-2.5 cursor-pointer hover:bg-muted/10 transition",
+                              publishMode === "DRAFT" && "border-primary bg-primary/5"
+                            )}
+                            onClick={() => {
+                              fieldMode.handleChange("DRAFT");
+                              fieldDate.handleChange(null);
+                            }}
+                          >
+                            <div className="size-3.5 rounded-full border border-primary flex items-center justify-center shrink-0">
+                              {publishMode === "DRAFT" && (
+                                <div className="size-2 rounded-full bg-primary" />
+                              )}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold">Keep as Draft</span>
+                            </div>
+                          </div>
+
+                          <div
+                            className={cn(
+                              "flex items-center gap-3 border rounded-lg p-2.5 cursor-pointer hover:bg-muted/10 transition",
+                              publishMode === "SCHEDULED" && "border-primary bg-primary/5"
+                            )}
+                            onClick={() => {
+                              fieldMode.handleChange("SCHEDULED");
+                              if (!publishedAt) {
+                                const tomorrow = new Date();
+                                tomorrow.setDate(tomorrow.getDate() + 1);
+                                tomorrow.setHours(10, 30, 0, 0);
+                                fieldDate.handleChange(tomorrow.toISOString());
+                              }
+                            }}
+                          >
+                            <div className="size-3.5 rounded-full border border-primary flex items-center justify-center shrink-0">
+                              {publishMode === "SCHEDULED" && (
+                                <div className="size-2 rounded-full bg-primary" />
+                              )}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold">Schedule Section</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {publishMode === "SCHEDULED" && (
+                          <div className="flex flex-col mt-1 animate-in fade-in duration-200">
+                            <DatePickerTime
+                              value={publishedAt}
+                              onChange={(val) => fieldDate.handleChange(val)}
+                              idPrefix="section-picker"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }}
+                </sectionForm.Field>
+              );
+            }}
           </sectionForm.Field>
 
           <DialogFooter className="mt-2">

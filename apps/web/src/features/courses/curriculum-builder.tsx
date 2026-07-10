@@ -11,6 +11,7 @@ import { ScrollArea } from "@oedulms/ui/components/scroll-area";
 import {
   useGetCurriculum,
   useDeleteSection,
+  useUpdateSection,
   useUpdateLecture,
   useDeleteLecture,
   useReorderSections,
@@ -21,6 +22,7 @@ import {
 import { SectionDialog } from "./section-dialog";
 import { LectureSheet } from "./lecture-sheet";
 import { SectionCard } from "./section-card";
+import { useConfirm } from "@/store/confirm-store";
 
 export interface CurriculumBuilderProps {
   courseId: string;
@@ -33,6 +35,7 @@ export interface CurriculumBuilderRef {
 export const CurriculumBuilder = React.forwardRef<CurriculumBuilderRef, CurriculumBuilderProps>(
   ({ courseId }, ref) => {
     const queryClient = useQueryClient();
+    const confirm = useConfirm();
     const {
       data: sections = [],
       isLoading,
@@ -43,11 +46,58 @@ export const CurriculumBuilder = React.forwardRef<CurriculumBuilderRef, Curricul
     } = useGetCurriculum(courseId);
 
     const deleteSection = useDeleteSection(courseId);
+    const updateSection = useUpdateSection(courseId);
     const reorderSections = useReorderSections(courseId);
 
     const updateLecture = useUpdateLecture(courseId);
     const deleteLecture = useDeleteLecture(courseId);
     const reorderLectures = useReorderLectures(courseId);
+
+    // Toggle status handlers
+    const handleToggleSectionStatus = async (section: Section, checked: boolean) => {
+      const publishMode = checked ? "AFTER_TRANSCODE" : "DRAFT";
+      const publishedAt = null;
+
+      const toastId = toast.loading("Updating section status...");
+      try {
+        await updateSection.mutateAsync({
+          id: section.id,
+          values: { publishMode, publishedAt },
+          skipInvalidate: false,
+        });
+        toast.success(`Section status updated to ${checked ? "Published" : "Draft"}!`, {
+          id: toastId,
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to update section status.";
+        toast.error(msg, { id: toastId });
+      }
+    };
+
+    const handleToggleLectureStatus = async (
+      lecture: Lecture,
+      sectionId: string,
+      checked: boolean
+    ) => {
+      const publishMode = checked ? "AFTER_TRANSCODE" : "DRAFT";
+      const publishedAt = null;
+
+      const toastId = toast.loading("Updating lecture status...");
+      try {
+        await updateLecture.mutateAsync({
+          sectionId,
+          id: lecture.id,
+          values: { publishMode, publishedAt },
+          skipInvalidate: false,
+        });
+        toast.success(`Lecture status updated to ${checked ? "Published" : "Draft"}!`, {
+          id: toastId,
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to update lecture status.";
+        toast.error(msg, { id: toastId });
+      }
+    };
 
     // Local state for Section dialogs
     const [sectionDialogOpen, setSectionDialogOpen] = React.useState(false);
@@ -104,11 +154,13 @@ export const CurriculumBuilder = React.forwardRef<CurriculumBuilderRef, Curricul
     };
 
     const handleDeleteSection = async (id: string) => {
-      if (
-        !confirm(
-          "Are you sure you want to delete this section? This will delete all lectures inside it."
-        )
-      ) {
+      const isConfirmed = await confirm({
+        title: "Delete Section?",
+        desc: "Are you sure you want to delete this section? This will delete all lectures inside it.",
+        destructive: true,
+        confirmText: "Delete",
+      });
+      if (!isConfirmed) {
         return;
       }
       const toastId = toast.loading("Deleting section...");
@@ -198,7 +250,13 @@ export const CurriculumBuilder = React.forwardRef<CurriculumBuilderRef, Curricul
     };
 
     const handleDeleteLecture = async (sectionId: string, id: string) => {
-      if (!confirm("Are you sure you want to delete this lecture?")) {
+      const isConfirmed = await confirm({
+        title: "Delete Lecture?",
+        desc: "Are you sure you want to delete this lecture?",
+        destructive: true,
+        confirmText: "Delete",
+      });
+      if (!isConfirmed) {
         return;
       }
       const toastId = toast.loading("Deleting lecture...");
@@ -320,58 +378,61 @@ export const CurriculumBuilder = React.forwardRef<CurriculumBuilderRef, Curricul
     }
 
     return (
-      <div className="flex flex-col w-full h-full overflow-hidden relative">
-        {sections.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-12 bg-muted/5 min-h-[300px]">
-            <Film className="size-10 text-muted-foreground mb-3" />
-            <h4 className="text-sm font-semibold mb-1">No sections created yet</h4>
-            <p className="text-xs text-muted-foreground mb-4 text-center max-w-sm">
-              Curriculums are divided into course sections. Create your first section to start
-              adding lectures.
-            </p>
-            <Button onClick={handleOpenAddSection} size="sm" variant="outline">
-              Create First Section
-            </Button>
-          </div>
-        ) : (
-          <ScrollArea className="flex-1 pr-2">
-            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEndSection}>
-              <SortableContext
-                items={sections.map((s) => s.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-6 pb-6">
-                  {sections.map((section, sIndex) => (
-                    <SectionCard
-                      key={section.id}
-                      section={section}
-                      sIndex={sIndex}
-                      sectionsCount={sections.length}
-                      onMoveSection={handleMoveSection}
-                      onEditSection={handleOpenEditSection}
-                      onDeleteSection={handleDeleteSection}
-                      deleteSectionPending={deleteSection.isPending}
-                      onAddLecture={handleOpenAddLecture}
-                      onEditLecture={handleOpenEditLecture}
-                      onDeleteLecture={handleDeleteLecture}
-                      onMoveLecture={handleMoveLecture}
-                      onDragEndLecture={handleDragEndLecture}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          </ScrollArea>
-        )}
+      <>
+        <div className="flex flex-col w-full h-full overflow-hidden relative">
+          {sections.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-12 bg-muted/5 min-h-[300px]">
+              <Film className="size-10 text-muted-foreground mb-3" />
+              <h4 className="text-sm font-semibold mb-1">No sections created yet</h4>
+              <p className="text-xs text-muted-foreground mb-4 text-center max-w-sm">
+                Curriculums are divided into course sections. Create your first section to start
+                adding lectures.
+              </p>
+              <Button onClick={handleOpenAddSection} size="sm" variant="outline">
+                Create First Section
+              </Button>
+            </div>
+          ) : (
+            <ScrollArea className="flex-1 pr-2">
+              <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEndSection}>
+                <SortableContext
+                  items={sections.map((s) => s.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-6 pb-6">
+                    {sections.map((section, sIndex) => (
+                      <SectionCard
+                        key={section.id}
+                        section={section}
+                        sIndex={sIndex}
+                        sectionsCount={sections.length}
+                        onMoveSection={handleMoveSection}
+                        onEditSection={handleOpenEditSection}
+                        onDeleteSection={handleDeleteSection}
+                        deleteSectionPending={deleteSection.isPending}
+                        onAddLecture={handleOpenAddLecture}
+                        onEditLecture={handleOpenEditLecture}
+                        onDeleteLecture={handleDeleteLecture}
+                        onMoveLecture={handleMoveLecture}
+                        onDragEndLecture={handleDragEndLecture}
+                        onToggleSectionStatus={handleToggleSectionStatus}
+                        onToggleLectureStatus={handleToggleLectureStatus}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </ScrollArea>
+          )}
 
-        {/* Floating background sync loader */}
-        {isFetching && !isLoading && (
-          <div className="absolute bottom-4 right-4 bg-background border border-border rounded-full px-3 py-1 shadow-md flex items-center gap-2 z-50 text-[10px] text-muted-foreground font-medium animate-in fade-in slide-in-from-bottom-2">
-            <Loader2 className="size-3 animate-spin text-primary" />
-            <span>Syncing changes...</span>
-          </div>
-        )}
-
+          {/* Floating background sync loader */}
+          {isFetching && !isLoading && (
+            <div className="absolute bottom-4 right-4 bg-background border border-border rounded-full px-3 py-1 shadow-md flex items-center gap-2 z-50 text-[10px] text-muted-foreground font-medium animate-in fade-in slide-in-from-bottom-2">
+              <Loader2 className="size-3 animate-spin text-primary" />
+              <span>Syncing changes...</span>
+            </div>
+          )}
+        </div>
         {/* Section Add/Edit Dialog Component */}
         {sectionDialogOpen && (
           <SectionDialog
@@ -396,7 +457,7 @@ export const CurriculumBuilder = React.forwardRef<CurriculumBuilderRef, Curricul
             onVideoUploadComplete={handleVideoUploadComplete}
           />
         )}
-      </div>
+      </>
     );
   }
 );
