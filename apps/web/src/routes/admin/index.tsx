@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { IndianRupee } from "lucide-react";
 import { useAuthStore } from "@/store/auth/auth-store";
 
 export const Route = createFileRoute("/admin/")({
@@ -21,11 +22,9 @@ function AdminIndexComponent() {
           </div>
           <div className="p-4 bg-muted/50 rounded-lg flex flex-col">
             <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-              Role
+              Role Permission
             </span>
-            <span className="text-sm font-semibold text-primary capitalize mt-1">
-              Instructor / Teacher
-            </span>
+            <span className="text-sm font-semibold truncate mt-1">{user?.role}</span>
           </div>
         </div>
       </div>
@@ -40,7 +39,10 @@ function AdminIndexComponent() {
           <span className="text-sm text-muted-foreground font-semibold">Total Students</span>
         </div>
         <div className="p-6 bg-card border rounded-lg flex flex-col gap-2">
-          <span className="text-2xl font-bold">$0.00</span>
+          <span className="text-2xl font-bold flex items-center gap-1">
+            <IndianRupee className="size-5" />
+            0.00
+          </span>
           <span className="text-sm text-muted-foreground font-semibold">Total Earnings</span>
         </div>
       </div>

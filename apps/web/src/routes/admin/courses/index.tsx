@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus, Edit2, Eye, Trash2, BookOpen, AlertCircle } from "lucide-react";
+import { Plus, Edit2, Eye, Trash2, BookOpen, AlertCircle, IndianRupee } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@oedulms/ui/components/button";
@@ -123,13 +123,20 @@ function AdminCoursesListComponent() {
                     <span className="text-primary">Free</span>
                   ) : course.discountPrice != null ? (
                     <span className="flex items-center gap-2">
-                      <span className="line-through text-muted-foreground">
-                        ${course.price.toFixed(2)}
+                      <span className="line-through text-muted-foreground flex items-center gap-0.5">
+                        <IndianRupee className="size-3" />
+                        {course.price.toFixed(2)}
                       </span>
-                      <span className="text-primary">${course.discountPrice.toFixed(2)}</span>
+                      <span className="text-primary flex items-center gap-0.5">
+                        <IndianRupee className="size-3" />
+                        {course.discountPrice.toFixed(2)}
+                      </span>
                     </span>
                   ) : (
-                    <span>${course.price.toFixed(2)}</span>
+                    <span className="flex items-center gap-0.5">
+                      <IndianRupee className="size-3" />
+                      {course.price.toFixed(2)}
+                    </span>
                   )}
                 </div>
 

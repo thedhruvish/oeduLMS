@@ -17,3 +17,15 @@ export const studentsKeys = {
   details: () => [...studentsKeys.all, "detail"] as const,
   detail: (id: string) => [...studentsKeys.details(), id] as const,
 };
+
+export const couponsKeys = {
+  all: ["coupons"] as const,
+  lists: () => [...couponsKeys.all, "list"] as const,
+  details: () => [...couponsKeys.all, "detail"] as const,
+  detail: (id: string) => [...couponsKeys.details(), id] as const,
+};
+
+export const enrollmentsKeys = {
+  all: ["enrollments"] as const,
+  lists: () => [...enrollmentsKeys.all, "list"] as const,
+};

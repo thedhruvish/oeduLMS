@@ -40,6 +40,7 @@ import {
 
 import { useStudents, useBanStudent, useUnbanStudent, type Student } from "@/api/students";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { KpiCard } from "@/components/ui/kpi-card";
 import { StudentDetailsSheet } from "@/features/student/student-details-sheet";
 
 export const Route = createFileRoute("/admin/students")({
@@ -142,51 +143,24 @@ function AdminStudentsComponent() {
     <div className="flex flex-col gap-6 w-full h-full overflow-hidden">
       {/* 1. KPIs Section */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 shrink-0">
-        <Card className="bg-card border relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Total Students
-              </p>
-              <h3 className="text-3xl font-extrabold mt-1 tracking-tight">{totalCount}</h3>
-            </div>
-            <div className="p-3 rounded-full bg-primary/10 text-primary">
-              <Users className="size-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Active
-              </p>
-              <h3 className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-500 mt-1 tracking-tight">
-                {activeCount}
-              </h3>
-            </div>
-            <div className="p-3 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-500">
-              <UserCheck className="size-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Suspended
-              </p>
-              <h3 className="text-3xl font-extrabold text-destructive mt-1 tracking-tight">
-                {suspendedCount}
-              </h3>
-            </div>
-            <div className="p-3 rounded-full bg-destructive/10 text-destructive">
-              <UserMinus className="size-6" />
-            </div>
-          </CardContent>
-        </Card>
+        <KpiCard
+          title="Total Students"
+          value={totalCount}
+          icon={Users}
+          iconClassName="bg-primary/10 text-primary"
+        />
+        <KpiCard
+          title="Active"
+          value={activeCount}
+          icon={UserCheck}
+          iconClassName="bg-emerald-500/10 text-emerald-600 dark:text-emerald-500"
+        />
+        <KpiCard
+          title="Suspended"
+          value={suspendedCount}
+          icon={UserMinus}
+          iconClassName="bg-destructive/10 text-destructive"
+        />
       </div>
 
       {/* 2. Filters / Controls */}
