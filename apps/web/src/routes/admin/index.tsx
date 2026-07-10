@@ -8,6 +8,7 @@ export const Route = createFileRoute("/admin/")({
 
 function AdminIndexComponent() {
   const user = useAuthStore((state) => state.user);
+  const role = useAuthStore((state) => state.role);
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -24,7 +25,7 @@ function AdminIndexComponent() {
             <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
               Role Permission
             </span>
-            <span className="text-sm font-semibold truncate mt-1">{user?.role}</span>
+            <span className="text-sm font-semibold truncate mt-1">{role}</span>
           </div>
         </div>
       </div>
