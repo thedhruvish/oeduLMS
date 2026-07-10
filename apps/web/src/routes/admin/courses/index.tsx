@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import { Button } from "@oedulms/ui/components/button";
 import { Badge } from "@oedulms/ui/components/badge";
+import { Card, CardContent } from "@oedulms/ui/components/card";
 import { useCourses, useDeleteCourse } from "@/api/courses";
 import { useConfirm } from "@/store/confirm-store";
 
@@ -17,32 +18,50 @@ function AdminCoursesListComponent() {
   const confirm = useConfirm();
 
   const handleDelete = async (id: string, title: string) => {
-    const isConfirmed = await confirm({
-      title: "Delete Course?",
-      desc: `Are you sure you want to delete the course "${title}"?`,
+    const ok = await confirm({
+      title: "Delete Course",
+      desc: `Are you sure you want to delete "${title}"? This action cannot be undone.`,
       destructive: true,
       confirmText: "Delete",
     });
-    if (isConfirmed) {
-      try {
-        await deleteCourseMutation.mutateAsync(id);
-        toast.success("Course deleted successfully!");
-      } catch {
-        toast.error("Failed to delete course.");
-      }
-    }
+
+    if (!ok) return;
+
+    deleteCourseMutation.mutate(id, {
+      onSuccess: () => {
+        toast.success(`Course "${title}" deleted successfully.`);
+      },
+      onError: () => {
+        toast.error(`Failed to delete course "${title}".`);
+      },
+    });
   };
 
   if (isLoading) {
     return (
-      <div className="flex w-full flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <div className="h-6 w-32 bg-muted animate-pulse rounded" />
-          <div className="h-9 w-28 bg-muted animate-pulse rounded" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-32 animate-pulse rounded bg-muted" />
+          <div className="h-9 w-28 animate-pulse rounded bg-muted" />
         </div>
-        <div className="grid grid-cols-1 gap-4">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="h-20 bg-card border rounded-lg animate-pulse" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <div className="aspect-video w-full animate-pulse bg-muted" />
+              <CardContent className="p-4 flex flex-col gap-3">
+                <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
+                <div className="flex gap-2">
+                  <div className="h-5 w-16 animate-pulse rounded bg-muted" />
+                  <div className="h-5 w-20 animate-pulse rounded bg-muted" />
+                </div>
+                <div className="h-5 w-16 animate-pulse rounded bg-muted" />
+                <div className="flex gap-2 pt-2 border-t">
+                  <div className="h-7 w-14 animate-pulse rounded bg-muted" />
+                  <div className="h-7 w-18 animate-pulse rounded bg-muted" />
+                  <div className="h-7 w-14 animate-pulse rounded bg-muted" />
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -51,118 +70,118 @@ function AdminCoursesListComponent() {
 
   if (isError) {
     return (
-      <div className="p-6 border border-destructive/20 bg-destructive/10 rounded-lg flex items-start gap-3">
-        <AlertCircle className="size-5 text-destructive shrink-0" />
-        <div className="flex flex-col gap-1">
-          <h3 className="font-semibold text-destructive">Error Loading Courses</h3>
-          <p className="text-sm text-muted-foreground">
-            {error instanceof Error ? error.message : "Failed to load courses catalogue."}
-          </p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <AlertCircle className="size-12 text-destructive mb-4" />
+        <h2 className="text-lg font-semibold">Failed to load courses</h2>
+        <p className="text-muted-foreground mt-1">
+          {error?.message || "An unexpected error occurred."}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-bold">Catalog</h2>
-        <Button render={<Link to="/admin/courses/new" />} size="sm">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Catalog</h1>
+        <Button render={<Link to="/admin/courses/new" />}>
           <Plus className="size-4" data-icon="inline-start" />
           New Course
         </Button>
       </div>
 
-      {!courses || courses.length === 0 ? (
-        <div className="p-12 border-2 border-dashed border-muted-foreground/15 rounded-lg text-center flex flex-col items-center gap-4">
-          <div className="p-3 bg-primary/5 rounded-full">
-            <BookOpen className="size-8 text-primary" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <h3 className="text-lg font-bold">No courses created yet</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              Get started by creating your very first course curriculum.
-            </p>
-          </div>
-          <Button render={<Link to="/admin/courses/new" />} size="sm" className="mt-2">
-            <Plus className="size-4" data-icon="inline-start" />
-            Create Course
-          </Button>
-        </div>
-      ) : (
-        <div className="border rounded-lg bg-card overflow-hidden">
-          <div className="divide-y">
-            {courses.map((course) => (
-              <div
-                key={course.id}
-                className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-muted/30 transition"
-              >
-                <div className="flex flex-col gap-2 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold truncate text-foreground">{course.title}</span>
-                    <Badge variant={course.status === "PUBLISHED" ? "default" : "secondary"}>
-                      {course.status}
-                    </Badge>
-                    <Badge variant="outline" className="capitalize text-muted-foreground">
-                      {course.level.toLowerCase()}
-                    </Badge>
-                  </div>
-                  {course.shortDescription && (
-                    <p className="text-xs text-muted-foreground truncate max-w-xl">
-                      {course.shortDescription}
-                    </p>
+      {courses && courses.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {courses.map((course) => (
+            <Card key={course.id} className="overflow-hidden">
+              {course.thumbnail ? (
+                <div>
+                  <img
+                    src={course.thumbnail}
+                    alt={course.title}
+                    className="aspect-video object-cover w-full"
+                  />
+                </div>
+              ) : (
+                <div className="bg-muted/40 aspect-video flex items-center justify-center">
+                  <BookOpen className="size-10 text-muted-foreground" />
+                </div>
+              )}
+
+              <CardContent className="p-4 flex flex-col gap-3">
+                <h3 className="font-semibold text-foreground truncate">{course.title}</h3>
+
+                <div className="flex items-center gap-2">
+                  <Badge variant={course.status === "PUBLISHED" ? "default" : "secondary"}>
+                    {course.status === "PUBLISHED" ? "Published" : "Draft"}
+                  </Badge>
+                  <Badge variant="outline">{course.level.toLowerCase()}</Badge>
+                </div>
+
+                <div className="text-sm font-medium">
+                  {course.price === 0 ? (
+                    <span className="text-primary">Free</span>
+                  ) : course.discountPrice != null ? (
+                    <span className="flex items-center gap-2">
+                      <span className="line-through text-muted-foreground">
+                        ${course.price.toFixed(2)}
+                      </span>
+                      <span className="text-primary">${course.discountPrice.toFixed(2)}</span>
+                    </span>
+                  ) : (
+                    <span>${course.price.toFixed(2)}</span>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
-                  <span className="text-sm font-bold text-foreground">
-                    {course.price === 0 ? "Free" : `$${course.price.toFixed(2)}`}
-                  </span>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      render={<Link to="/admin/courses/$id" params={{ id: course.id }} />}
-                      size="icon"
-                      variant="ghost"
-                      className="size-8"
-                      title="View Details"
-                    >
-                      <Eye className="size-4" />
-                    </Button>
-                    <Button
-                      render={
-                        <Link to="/admin/courses/$id/curriculum" params={{ id: course.id }} />
-                      }
-                      size="icon"
-                      variant="ghost"
-                      className="size-8 text-primary hover:bg-primary/10 hover:text-primary"
-                      title="Manage Curriculum"
-                    >
-                      <BookOpen className="size-4" />
-                    </Button>
-                    <Button
-                      render={<Link to="/admin/courses/$id/edit" params={{ id: course.id }} />}
-                      size="icon"
-                      variant="ghost"
-                      className="size-8"
-                      title="Edit Details"
-                    >
-                      <Edit2 className="size-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => handleDelete(course.id, course.title)}
-                      disabled={deleteCourseMutation.isPending}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  <Button
+                    render={<Link to="/admin/courses/$id" params={{ id: course.id }} />}
+                    size="xs"
+                    variant="outline"
+                  >
+                    <Eye className="size-3" data-icon="inline-start" />
+                    View
+                  </Button>
+                  <Button
+                    render={<Link to="/admin/courses/$id/curriculum" params={{ id: course.id }} />}
+                    size="xs"
+                    variant="outline"
+                    className="text-primary hover:bg-primary/10 hover:text-primary border-primary/20"
+                  >
+                    <BookOpen className="size-3" data-icon="inline-start" />
+                    Add Lecture
+                  </Button>
+                  <Button
+                    render={<Link to="/admin/courses/$id/edit" params={{ id: course.id }} />}
+                    size="xs"
+                    variant="outline"
+                  >
+                    <Edit2 className="size-3" data-icon="inline-start" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => handleDelete(course.id, course.title)}
+                    disabled={deleteCourseMutation.isPending}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
                 </div>
-              </div>
-            ))}
-          </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <BookOpen className="size-12 text-muted-foreground mb-4" />
+          <h2 className="text-lg font-semibold">No courses yet</h2>
+          <p className="text-muted-foreground mt-1">Get started by creating your first course.</p>
+          <Button render={<Link to="/admin/courses/new" />} className="mt-4">
+            <Plus className="size-4" data-icon="inline-start" />
+            New Course
+          </Button>
         </div>
       )}
     </div>

@@ -4,6 +4,7 @@ import { teacherGuard } from "../middleware/auth";
 import { adminCoursesRouter } from "../admin/courses";
 import { adminMediaRouter } from "../admin/media";
 import { adminCurriculumRouter } from "../admin/curriculum";
+import { adminStudentsRouter } from "../admin/students";
 
 export const adminRouter = new Hono<AppVariables>();
 
@@ -14,3 +15,4 @@ adminRouter.use("*", teacherGuard);
 adminRouter.route("/courses", adminCoursesRouter);
 adminRouter.route("/courses", adminCurriculumRouter);
 adminRouter.route("/media", adminMediaRouter);
+adminRouter.route("/students", adminStudentsRouter);

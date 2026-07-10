@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Edit,
@@ -11,11 +11,14 @@ import {
   Award,
   List,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@oedulms/ui/components/button";
 import { Badge } from "@oedulms/ui/components/badge";
-import { useCourse } from "@/api/courses";
+import { useCourse, useDeleteCourse } from "@/api/courses";
+import { useConfirm } from "@/store/confirm-store";
 
 export const Route = createFileRoute("/admin/courses/$id/")({
   component: AdminCourseDetailComponent,
@@ -24,6 +27,29 @@ export const Route = createFileRoute("/admin/courses/$id/")({
 function AdminCourseDetailComponent() {
   const { id } = Route.useParams();
   const { data: course, isLoading, isError, error } = useCourse(id);
+  const deleteCourseMutation = useDeleteCourse();
+  const confirm = useConfirm();
+  const navigate = useNavigate();
+
+  const handleDelete = async () => {
+    if (!course) return;
+    const ok = await confirm({
+      title: "Delete Course?",
+      desc: `Are you sure you want to delete the course "${course.title}"? This action cannot be undone.`,
+      destructive: true,
+      confirmText: "Delete",
+    });
+
+    if (ok) {
+      try {
+        await deleteCourseMutation.mutateAsync(course.id);
+        toast.success("Course deleted successfully!");
+        navigate({ to: "/admin/courses" });
+      } catch {
+        toast.error("Failed to delete course.");
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -91,9 +117,19 @@ function AdminCourseDetailComponent() {
           <Button
             render={<Link to="/admin/courses/$id/edit" params={{ id: course.id }} />}
             size="sm"
+            variant="outline"
           >
             <Edit className="size-4" data-icon="inline-start" />
             Edit Details
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+            disabled={deleteCourseMutation.isPending}
+          >
+            <Trash2 className="size-4" data-icon="inline-start" />
+            Delete Course
           </Button>
         </div>
       </div>
