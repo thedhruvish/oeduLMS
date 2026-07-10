@@ -55,8 +55,8 @@ function AdminCourseCurriculumComponent() {
   return (
     <div className="flex flex-col gap-6 h-full overflow-hidden w-full">
       {/* Header row with back button */}
-      <div className="flex items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <Button
             render={<Link to="/admin/courses" />}
             size="icon"
@@ -65,15 +65,19 @@ function AdminCourseCurriculumComponent() {
           >
             <ArrowLeft className="size-4" />
           </Button>
-          <h2 className="text-lg font-bold">Curriculum: {course.title}</h2>
+          <h2 className="text-base sm:text-lg font-bold truncate">Curriculum: {course.title}</h2>
         </div>
-        <Button onClick={() => builderRef.current?.openAddSection()} size="sm">
+        <Button
+          onClick={() => builderRef.current?.openAddSection()}
+          size="sm"
+          className="w-full sm:w-auto shrink-0"
+        >
           <Plus className="size-4" data-icon="inline-start" />
           Add Section
         </Button>
       </div>
 
-      <div className="flex-1 p-6 border rounded-lg bg-card overflow-hidden">
+      <div className="flex-1 p-3 sm:p-6 border rounded-lg bg-card overflow-hidden">
         <CurriculumBuilder ref={builderRef} courseId={course.id} />
       </div>
     </div>

@@ -3,8 +3,7 @@ import { Film, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { curriculumKeys } from "@/api/query-keys";
-import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { Sortable, SortableItem } from "@oedulms/ui/components/reui/sortable";
 
 import { Button } from "@oedulms/ui/components/button";
 import { ScrollArea } from "@oedulms/ui/components/scroll-area";
@@ -174,17 +173,7 @@ export const CurriculumBuilder = React.forwardRef<CurriculumBuilderRef, Curricul
     };
 
     // Section Drag handlers
-    const handleDragEndSection = async (event: DragEndEvent) => {
-      const { active, over } = event;
-      if (!over || active.id === over.id) return;
-
-      const oldIndex = sections.findIndex((s) => s.id === active.id);
-      const newIndex = sections.findIndex((s) => s.id === over.id);
-
-      const updated = [...sections];
-      const [dragged] = updated.splice(oldIndex, 1);
-      updated.splice(newIndex, 0, dragged);
-
+    const handleSectionsReordered = async (updated: Section[]) => {
       // Sync update cache immediately to prevent drag snapback
       const queryKey = curriculumKeys.course(courseId);
       const previous = queryClient.getQueryData<Section[]>(queryKey);
@@ -270,20 +259,7 @@ export const CurriculumBuilder = React.forwardRef<CurriculumBuilderRef, Curricul
     };
 
     // Lecture Drag handlers
-    const handleDragEndLecture = async (event: DragEndEvent, sectionId: string) => {
-      const { active, over } = event;
-      if (!over || active.id === over.id) return;
-
-      const section = sections.find((s) => s.id === sectionId);
-      if (!section) return;
-
-      const oldIndex = section.lectures.findIndex((l) => l.id === active.id);
-      const newIndex = section.lectures.findIndex((l) => l.id === over.id);
-
-      const updatedLectures = [...section.lectures];
-      const [dragged] = updatedLectures.splice(oldIndex, 1);
-      updatedLectures.splice(newIndex, 0, dragged);
-
+    const handleLecturesReordered = async (sectionId: string, updatedLectures: Lecture[]) => {
       // Sync update cache immediately to prevent drag snapback
       const queryKey = curriculumKeys.course(courseId);
       const previous = queryClient.getQueryData<Section[]>(queryKey);
@@ -394,34 +370,34 @@ export const CurriculumBuilder = React.forwardRef<CurriculumBuilderRef, Curricul
             </div>
           ) : (
             <ScrollArea className="flex-1 pr-2">
-              <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEndSection}>
-                <SortableContext
-                  items={sections.map((s) => s.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-6 pb-6">
-                    {sections.map((section, sIndex) => (
-                      <SectionCard
-                        key={section.id}
-                        section={section}
-                        sIndex={sIndex}
-                        sectionsCount={sections.length}
-                        onMoveSection={handleMoveSection}
-                        onEditSection={handleOpenEditSection}
-                        onDeleteSection={handleDeleteSection}
-                        deleteSectionPending={deleteSection.isPending}
-                        onAddLecture={handleOpenAddLecture}
-                        onEditLecture={handleOpenEditLecture}
-                        onDeleteLecture={handleDeleteLecture}
-                        onMoveLecture={handleMoveLecture}
-                        onDragEndLecture={handleDragEndLecture}
-                        onToggleSectionStatus={handleToggleSectionStatus}
-                        onToggleLectureStatus={handleToggleLectureStatus}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
+              <Sortable
+                value={sections}
+                onValueChange={handleSectionsReordered}
+                getItemValue={(s) => s.id}
+                strategy="vertical"
+                className="space-y-6 pb-6"
+              >
+                {sections.map((section, sIndex) => (
+                  <SortableItem key={section.id} value={section.id}>
+                    <SectionCard
+                      section={section}
+                      sIndex={sIndex}
+                      sectionsCount={sections.length}
+                      onMoveSection={handleMoveSection}
+                      onEditSection={handleOpenEditSection}
+                      onDeleteSection={handleDeleteSection}
+                      deleteSectionPending={deleteSection.isPending}
+                      onAddLecture={handleOpenAddLecture}
+                      onEditLecture={handleOpenEditLecture}
+                      onDeleteLecture={handleDeleteLecture}
+                      onMoveLecture={handleMoveLecture}
+                      onDragEndLecture={handleLecturesReordered}
+                      onToggleSectionStatus={handleToggleSectionStatus}
+                      onToggleLectureStatus={handleToggleLectureStatus}
+                    />
+                  </SortableItem>
+                ))}
+              </Sortable>
             </ScrollArea>
           )}
 
