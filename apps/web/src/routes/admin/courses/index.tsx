@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@oedulms/ui/components/button";
 import { Badge } from "@oedulms/ui/components/badge";
 import { useCourses, useDeleteCourse } from "@/api/courses";
+import { useConfirm } from "@/store/confirm-store";
 
 export const Route = createFileRoute("/admin/courses/")({
   component: AdminCoursesListComponent,
@@ -13,9 +14,16 @@ export const Route = createFileRoute("/admin/courses/")({
 function AdminCoursesListComponent() {
   const { data: courses, isLoading, isError, error } = useCourses();
   const deleteCourseMutation = useDeleteCourse();
+  const confirm = useConfirm();
 
   const handleDelete = async (id: string, title: string) => {
-    if (confirm(`Are you sure you want to delete the course "${title}"?`)) {
+    const isConfirmed = await confirm({
+      title: "Delete Course?",
+      desc: `Are you sure you want to delete the course "${title}"?`,
+      destructive: true,
+      confirmText: "Delete",
+    });
+    if (isConfirmed) {
       try {
         await deleteCourseMutation.mutateAsync(id);
         toast.success("Course deleted successfully!");

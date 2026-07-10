@@ -1,3 +1,4 @@
+import { GlobalConfirmDialog } from "@/components/ui/global-confirm-dialog";
 import { TooltipProvider } from "@oedulms/ui/components/tooltip";
 import { Toaster } from "@oedulms/ui/components/sonner";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
@@ -49,6 +50,7 @@ function RootComponent() {
         <TooltipProvider>
           <Outlet />
           <Toaster richColors />
+          <GlobalConfirmDialog />
         </TooltipProvider>
       </ThemeProvider>
       <TanStackRouterDevtools position="bottom-left" />

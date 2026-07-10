@@ -6,6 +6,7 @@ import { uploadFileToS3, deleteFileFromS3, startBackgroundUpload } from "@/api/m
 import { useUploadStore } from "@/store/upload-store";
 import { toast } from "sonner";
 import { cn } from "@oedulms/ui/lib/utils";
+import { useConfirm } from "@/store/confirm-store";
 
 interface MediaUploaderProps {
   value?: string | null;
@@ -30,6 +31,7 @@ export function MediaUploader({
 }: MediaUploaderProps) {
   const [progress, setProgress] = React.useState<number | null>(null);
   const [isUploading, setIsUploading] = React.useState(false);
+  const confirm = useConfirm();
   const [uploadedKey, setUploadedKey] = React.useState<string | null>(null);
   const [currentUploadId, setCurrentUploadId] = React.useState<string | null>(null);
 
@@ -104,6 +106,16 @@ export function MediaUploader({
   const handleRemove = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!value) return;
+
+    const mediaLabel =
+      acceptType === "video" ? "Video" : acceptType === "image" ? "Thumbnail" : "File";
+    const isConfirmed = await confirm({
+      title: `Delete ${mediaLabel}?`,
+      desc: `Are you sure you want to delete this ${mediaLabel.toLowerCase()}?`,
+      destructive: true,
+      confirmText: "Delete",
+    });
+    if (!isConfirmed) return;
 
     // Extract key from S3 URL or use stored key
     let keyToDelete = uploadedKey;
