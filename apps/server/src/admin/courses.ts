@@ -30,6 +30,10 @@ async function resolveInstructorId(userId: string, displayName: string): Promise
     .values({ userId, slug, displayName })
     .returning({ id: instructorProfiles.id });
 
+  if (!created[0]) {
+    throw new Error("Failed to create instructor profile");
+  }
+
   return created[0].id;
 }
 
@@ -45,7 +49,7 @@ async function generateSlug(title: string, excludeId?: string): Promise<string> 
       .from(courses)
       .where(eq(courses.slug, slug))
       .limit(1);
-    if (existing.length === 0 || existing[0].id === excludeId) break;
+    if (existing.length === 0 || existing[0]?.id === excludeId) break;
     slug = `${baseSlug}-${counter}`;
     counter++;
   }
@@ -106,6 +110,10 @@ adminCoursesRouter.post("/", zValidator("json", courseSchema), async (c) => {
       validateDays: body.validateDays || null,
     })
     .returning();
+
+  if (!newCourse) {
+    throw new Error("Failed to create course");
+  }
 
   // Insert FAQs if provided
   let insertedFaqs: (typeof courseFaqs.$inferSelect)[] = [];

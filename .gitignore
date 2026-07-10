@@ -8,6 +8,8 @@ dist
 build
 *.tsbuildinfo
 
+demo-video
+
 # Generated files
 apps/web/src/routeTree.gen.ts
 
