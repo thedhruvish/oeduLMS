@@ -39,11 +39,12 @@ export function SectionDialog({
   const updateSection = useUpdateSection(courseId);
 
   const sectionForm = useForm({
+    formId: editingSection ? `edit-section-${editingSection.id}` : "create-section",
     defaultValues: {
-      title: "",
-      description: "",
-      publishMode: "AFTER_TRANSCODE",
-      publishedAt: null,
+      title: editingSection?.title || "",
+      description: editingSection?.description || "",
+      publishMode: editingSection?.publishMode || "AFTER_TRANSCODE",
+      publishedAt: editingSection?.publishedAt || null,
     } as SectionInput,
     onSubmit: async ({ value }) => {
       if (!value.title || value.title.trim().length < 3) {
@@ -79,14 +80,9 @@ export function SectionDialog({
 
   React.useEffect(() => {
     if (open) {
-      sectionForm.reset({
-        title: editingSection?.title || "",
-        description: editingSection?.description || "",
-        publishMode: editingSection?.publishMode || "AFTER_TRANSCODE",
-        publishedAt: editingSection?.publishedAt || null,
-      });
+      sectionForm.reset();
     }
-  }, [open, editingSection]);
+  }, [open, editingSection, sectionForm]);
 
   const isPending = createSection.isPending || updateSection.isPending;
 

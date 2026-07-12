@@ -87,17 +87,18 @@ export function LectureSheet({
   const [attachmentProgress, setAttachmentProgress] = React.useState<number | null>(null);
 
   const lectureForm = useForm({
+    formId: editingLecture ? `edit-lecture-${editingLecture.id}` : "create-lecture",
     defaultValues: {
-      title: "",
-      description: "",
-      videoUrl: "",
-      thumbnail: "",
-      isPreview: false,
-      publishMode: "AFTER_TRANSCODE",
-      publishedAt: null,
-      qualities: ["360p", "720p", "1080p"],
-      resources: [],
-      duration: 0,
+      title: editingLecture?.title || "",
+      description: editingLecture?.description || "",
+      videoUrl: editingLecture?.videoUrl || "",
+      thumbnail: editingLecture?.thumbnail || "",
+      isPreview: editingLecture?.isPreview || false,
+      publishMode: editingLecture?.publishMode || "AFTER_TRANSCODE",
+      publishedAt: editingLecture?.publishedAt || null,
+      qualities: editingLecture?.qualities || ["360p", "720p", "1080p"],
+      resources: editingLecture?.resources || [],
+      duration: editingLecture?.duration || 0,
     } as LectureInput,
     onSubmit: async ({ value }) => {
       if (!value.title || value.title.trim().length < 3) {
@@ -144,25 +145,21 @@ export function LectureSheet({
 
   React.useEffect(() => {
     if (open) {
-      lectureForm.reset({
-        title: editingLecture?.title || "",
-        description: editingLecture?.description || "",
-        videoUrl: editingLecture?.videoUrl || "",
-        thumbnail: editingLecture?.thumbnail || "",
-        isPreview: editingLecture?.isPreview || false,
-        publishMode: editingLecture?.publishMode || "AFTER_TRANSCODE",
-        publishedAt: editingLecture?.publishedAt || null,
-        qualities: editingLecture?.qualities || ["360p", "720p", "1080p"],
-        resources: editingLecture?.resources || [],
-        duration: editingLecture?.duration || 0,
-      });
+      lectureForm.reset();
       const isRec = editingLecture?.qualities
         ? JSON.stringify([...editingLecture.qualities].sort()) ===
           JSON.stringify(["360p", "720p", "1080p"].sort())
         : true;
       setQualityMode(isRec ? "recommend" : "advanced");
+
+      const url = editingLecture?.videoUrl || "";
+      if (url && !url.includes("/videos/")) {
+        setVideoSource("link");
+      } else {
+        setVideoSource("upload");
+      }
     }
-  }, [open, editingLecture]);
+  }, [open, editingLecture, lectureForm]);
 
   const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
