@@ -25,7 +25,6 @@ export interface Course {
   durationSeconds: number;
   totalLectures: number;
   certificateEnabled: boolean;
-  level: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
   status: "DRAFT" | "PUBLISHED";
   language?: string;
   validateDays?: number;

@@ -47,7 +47,6 @@ const DEFAULT_VALUES: CourseInput = {
   durationSeconds: 0,
   totalLectures: 0,
   certificateEnabled: false,
-  level: "BEGINNER",
   status: "DRAFT",
   language: "",
   validateDays: null,
@@ -306,29 +305,6 @@ export function CourseForm({
                     <SelectContent>
                       <SelectItem value="DRAFT">Draft</SelectItem>
                       <SelectItem value="PUBLISHED">Published</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
-              )}
-            </form.Field>
-
-            {/* Level */}
-            <form.Field name="level">
-              {(field) => (
-                <Field>
-                  <FieldLabel>Difficulty Level</FieldLabel>
-                  <Select
-                    value={field.state.value}
-                    onValueChange={(v) => field.handleChange(v as CourseInput["level"])}
-                    disabled={isPending}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BEGINNER">Beginner</SelectItem>
-                      <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
-                      <SelectItem value="ADVANCED">Advanced</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>

@@ -27,7 +27,6 @@ export const courses = pgTable("courses", {
   thumbnail: text("thumbnail"),
   trailerVideo: text("trailer_video"),
   language: text("language"),
-  level: text("level"), // BEGINNER, INTERMEDIATE, ADVANCED, etc.
   validateDays: integer("validate_days"),
   status: text("status").default("DRAFT").notNull(), // DRAFT, PUBLISHED, etc.
   price: integer("price").default(0).notNull(), // price in cents

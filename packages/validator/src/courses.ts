@@ -33,7 +33,6 @@ export const courseSchema = z.object({
   durationSeconds: z.number().int().min(0),
   totalLectures: z.number().int().min(0),
   certificateEnabled: z.boolean(),
-  level: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]),
   status: z.enum(["DRAFT", "PUBLISHED"]),
   language: z.string().optional().or(z.literal("")),
   validateDays: z.number().int().min(1).optional().nullable(),
