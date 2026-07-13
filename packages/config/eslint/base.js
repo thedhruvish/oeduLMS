@@ -1,14 +1,11 @@
 import js from "@eslint/js";
 import ts from "typescript-eslint";
+
 import turboPlugin from "eslint-plugin-turbo";
 import globals from "globals";
+import { defineConfig } from "eslint/config";
 
-/**
- * A shared ESLint configuration for the monorepo's non-React packages/apps.
- *
- * @type {import("eslint").Linter.Config[]}
- */
-export const baseConfig = ts.config(
+export const baseConfig = defineConfig(
   js.configs.recommended,
   ...ts.configs.recommended,
   {
@@ -28,6 +25,18 @@ export const baseConfig = ts.config(
     },
     rules: {
       "@typescript-eslint/no-empty-object-type": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error", // or 'warn'
+        {
+          args: "all",
+          argsIgnorePattern: "^_",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
     },
   },
   {

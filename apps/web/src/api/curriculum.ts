@@ -117,7 +117,7 @@ export function useUpdateSection(courseId: string) {
 
       return { previousCurriculum };
     },
-    onError: (err, newVariables, context) => {
+    onError: (_err, _newVariables, context) => {
       if (context?.previousCurriculum) {
         queryClient.setQueryData(queryKey, context.previousCurriculum);
       }
@@ -131,7 +131,7 @@ export function useUpdateSection(courseId: string) {
         );
       }
     },
-    onSettled: (data, error, variables) => {
+    onSettled: (_data, _error, variables) => {
       if (!variables?.skipInvalidate) {
         queryClient.invalidateQueries({ queryKey });
       }
@@ -262,7 +262,7 @@ export function useUpdateLecture(courseId: string) {
 
       return { previousCurriculum };
     },
-    onError: (err, newVariables, context) => {
+    onError: (_err, _newVariables, context) => {
       if (context?.previousCurriculum) {
         queryClient.setQueryData(queryKey, context.previousCurriculum);
       }
@@ -284,7 +284,7 @@ export function useUpdateLecture(courseId: string) {
         );
       }
     },
-    onSettled: (data, error, variables) => {
+    onSettled: (_data, _error, variables) => {
       if (!variables?.skipInvalidate) {
         queryClient.invalidateQueries({ queryKey });
       }

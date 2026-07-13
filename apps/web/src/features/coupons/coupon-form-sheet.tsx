@@ -146,6 +146,7 @@ export function CouponFormSheet({ open, onOpenChange, editingCoupon }: CouponFor
             } as CouponFormValues)
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingCoupon, open]);
 
   const isPending = createMutation.isPending || updateMutation.isPending;
