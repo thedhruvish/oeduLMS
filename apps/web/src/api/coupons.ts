@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosClient } from "@/lib/axios-client";
 import { couponsKeys } from "./query-keys";
 import type { CouponInput } from "@oedulms/validator";
+import type { PublicCouponValidation, ValidateCoupon } from "@/types/public";
 
 export interface Coupon {
   id: string;
@@ -110,6 +111,18 @@ export function useDeleteCoupon() {
     mutationFn: deleteCoupon,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: couponsKeys.lists() });
+    },
+  });
+}
+
+export function useValidatePublicCoupon() {
+  return useMutation({
+    mutationFn: async (payload: ValidateCoupon) => {
+      const { data } = await axiosClient.post<PublicCouponValidation>(
+        "/public/coupons/validate",
+        payload
+      );
+      return data;
     },
   });
 }

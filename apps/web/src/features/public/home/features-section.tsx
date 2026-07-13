@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { motion, useInView } from "motion/react";
-import { Trophy, Layers, Award, Infinity as InfinityIcon , Users2, Smartphone } from "lucide-react";
+import { Trophy, Layers, Award, Infinity as InfinityIcon, Users2, Smartphone } from "lucide-react";
 import { siteConfig } from "@/config/site";
 import { cardVariants, containerVariants } from "@/config/motion-animation";
 

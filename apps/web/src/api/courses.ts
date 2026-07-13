@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosClient } from "@/lib/axios-client";
 import { coursesKeys } from "./query-keys";
 import type { CourseInput, FaqInput } from "@oedulms/validator";
+import type { PublicCourse, PublicCourseDetail, PublicSection, PublicFaq } from "@/types/public";
 
 export interface CourseFaq {
   id: string;
@@ -128,5 +129,61 @@ export function useDeleteCourse() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: coursesKeys.lists() });
     },
+  });
+}
+
+export function usePublicCourses() {
+  return useQuery<PublicCourse[]>({
+    queryKey: ["public-courses"],
+    queryFn: async () => {
+      const { data } = await axiosClient.get<PublicCourse[]>("/public/courses");
+      return data.map((c) => ({
+        ...c,
+        price: c.price / 100, // convert cents → dollars
+        discountPrice: c.discountPrice ? c.discountPrice / 100 : null,
+      }));
+    },
+  });
+}
+
+export function usePublicCourseDetails(idOrSlug: string) {
+  return useQuery<PublicCourseDetail>({
+    queryKey: ["public-course-detail", idOrSlug],
+    queryFn: async () => {
+      const { data } = await axiosClient.get<PublicCourseDetail>(`/public/courses/${idOrSlug}`);
+      return {
+        ...data,
+        price: data.price / 100, // convert cents → dollars
+        discountPrice: data.discountPrice ? data.discountPrice / 100 : null,
+      };
+    },
+    enabled: !!idOrSlug,
+    retry: false,
+  });
+}
+
+export function usePublicCourseCurriculum(idOrSlug: string) {
+  return useQuery<PublicSection[]>({
+    queryKey: ["public-course-curriculum", idOrSlug],
+    queryFn: async () => {
+      const { data } = await axiosClient.get<PublicSection[]>(
+        `/public/courses/${idOrSlug}/curriculum`
+      );
+      return data;
+    },
+    enabled: !!idOrSlug,
+    retry: false,
+  });
+}
+
+export function usePublicCourseFaqs(idOrSlug: string) {
+  return useQuery<PublicFaq[]>({
+    queryKey: ["public-course-faqs", idOrSlug],
+    queryFn: async () => {
+      const { data } = await axiosClient.get<PublicFaq[]>(`/public/courses/${idOrSlug}/faqs`);
+      return data;
+    },
+    enabled: !!idOrSlug,
+    retry: false,
   });
 }
