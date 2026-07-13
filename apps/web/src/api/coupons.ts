@@ -35,17 +35,17 @@ function normalizeCoupon(c: Coupon): Coupon {
 }
 
 async function fetchCoupons(): Promise<Coupon[]> {
-  const { data } = await axiosClient.get<Coupon[]>("/api/admin/coupons");
+  const { data } = await axiosClient.get<Coupon[]>("/admin/coupons");
   return data.map(normalizeCoupon);
 }
 
 async function fetchCouponById(id: string): Promise<Coupon> {
-  const { data } = await axiosClient.get<Coupon>(`/api/admin/coupons/${id}`);
+  const { data } = await axiosClient.get<Coupon>(`/admin/coupons/${id}`);
   return normalizeCoupon(data);
 }
 
 async function createCoupon(payload: CouponInput): Promise<Coupon> {
-  const { data } = await axiosClient.post<Coupon>("/api/admin/coupons", payload);
+  const { data } = await axiosClient.post<Coupon>("/admin/coupons", payload);
   return normalizeCoupon(data);
 }
 
@@ -56,12 +56,12 @@ async function updateCoupon({
   id: string;
   payload: CouponInput;
 }): Promise<Coupon> {
-  const { data } = await axiosClient.put<Coupon>(`/api/admin/coupons/${id}`, payload);
+  const { data } = await axiosClient.put<Coupon>(`/admin/coupons/${id}`, payload);
   return normalizeCoupon(data);
 }
 
 async function deleteCoupon(id: string): Promise<void> {
-  await axiosClient.delete(`/api/admin/coupons/${id}`);
+  await axiosClient.delete(`/admin/coupons/${id}`);
 }
 
 export function useCoupons() {

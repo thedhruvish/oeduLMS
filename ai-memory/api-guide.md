@@ -44,7 +44,7 @@ import { coursesKeys } from "./query-keys";
 
 // Colocated fetcher
 async function fetchCourses(filters = {}): Promise<Course[]> {
-  const { data } = await axiosClient.get("/api/courses", { params: filters });
+  const { data } = await axiosClient.get("/courses", { params: filters });
   return data;
 }
 
@@ -71,7 +71,7 @@ Mutations write/modify server data. Trigger targeted cache invalidations on succ
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 async function createCourse(payload: CreatePayload): Promise<Course> {
-  const { data } = await axiosClient.post("/api/courses", payload);
+  const { data } = await axiosClient.post("/courses", payload);
   return data;
 }
 
@@ -96,7 +96,7 @@ export function useUpdateCourse(id: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: UpdatePayload) => axiosClient.put(`/api/courses/${id}`, payload),
+    mutationFn: (payload: UpdatePayload) => axiosClient.put(`/courses/${id}`, payload),
     onMutate: async (newCourseData) => {
       // Cancel outgoing queries
       await queryClient.cancelQueries({ queryKey: coursesKeys.detail(id) });

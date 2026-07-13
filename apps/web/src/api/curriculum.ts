@@ -38,7 +38,7 @@ export function useGetCurriculum(courseId: string) {
   return useQuery({
     queryKey: curriculumKeys.course(courseId),
     queryFn: async () => {
-      const { data } = await axiosClient.get<Section[]>(`/api/admin/courses/${courseId}/sections`);
+      const { data } = await axiosClient.get<Section[]>(`/admin/courses/${courseId}/sections`);
       return data;
     },
     enabled: !!courseId,
@@ -52,7 +52,7 @@ export function useCreateSection(courseId: string) {
   return useMutation({
     mutationFn: async (values: SectionInput) => {
       const { data } = await axiosClient.post<Section>(
-        `/api/admin/courses/${courseId}/sections`,
+        `/admin/courses/${courseId}/sections`,
         values
       );
       return data;
@@ -80,7 +80,7 @@ export function useUpdateSection(courseId: string) {
       skipInvalidate?: boolean;
     }) => {
       const { data } = await axiosClient.put<Section>(
-        `/api/admin/courses/${courseId}/sections/${id}`,
+        `/admin/courses/${courseId}/sections/${id}`,
         values
       );
       return data;
@@ -146,7 +146,7 @@ export function useDeleteSection(courseId: string) {
   return useMutation({
     mutationFn: async (id: string) => {
       const { data } = await axiosClient.delete<{ success: boolean; deletedId: string }>(
-        `/api/admin/courses/${courseId}/sections/${id}`
+        `/admin/courses/${courseId}/sections/${id}`
       );
       return data;
     },
@@ -169,7 +169,7 @@ export function useCreateLecture(courseId: string) {
   return useMutation({
     mutationFn: async ({ sectionId, values }: { sectionId: string; values: LectureInput }) => {
       const { data } = await axiosClient.post<Lecture>(
-        `/api/admin/courses/${courseId}/sections/${sectionId}/lectures`,
+        `/admin/courses/${courseId}/sections/${sectionId}/lectures`,
         values
       );
       return data;
@@ -207,7 +207,7 @@ export function useUpdateLecture(courseId: string) {
       skipInvalidate?: boolean;
     }) => {
       const { data } = await axiosClient.put<Lecture>(
-        `/api/admin/courses/${courseId}/sections/${sectionId}/lectures/${id}`,
+        `/admin/courses/${courseId}/sections/${sectionId}/lectures/${id}`,
         values
       );
       return data;
@@ -299,7 +299,7 @@ export function useDeleteLecture(courseId: string) {
   return useMutation({
     mutationFn: async ({ sectionId, id }: { sectionId: string; id: string }) => {
       const { data } = await axiosClient.delete<{ success: boolean; deletedId: string }>(
-        `/api/admin/courses/${courseId}/sections/${sectionId}/lectures/${id}`
+        `/admin/courses/${courseId}/sections/${sectionId}/lectures/${id}`
       );
       return data;
     },
@@ -328,7 +328,7 @@ export function useReorderSections(courseId: string) {
   return useMutation({
     mutationFn: async (orders: { id: string; position: number }[]) => {
       const { data } = await axiosClient.put<{ success: boolean }>(
-        `/api/admin/courses/${courseId}/sections/reorder`,
+        `/admin/courses/${courseId}/sections/reorder`,
         { orders }
       );
       return data;
@@ -347,7 +347,7 @@ export function useReorderLectures(courseId: string) {
       orders: { id: string; position: number }[];
     }) => {
       const { data } = await axiosClient.put<{ success: boolean }>(
-        `/api/admin/courses/${courseId}/sections/${sectionId}/lectures/reorder`,
+        `/admin/courses/${courseId}/sections/${sectionId}/lectures/reorder`,
         { orders }
       );
       return data;

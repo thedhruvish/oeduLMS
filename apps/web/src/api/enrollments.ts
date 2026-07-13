@@ -21,12 +21,12 @@ export interface Enrollment {
 }
 
 async function fetchEnrollments(): Promise<Enrollment[]> {
-  const { data } = await axiosClient.get<Enrollment[]>("/api/admin/enrollments");
+  const { data } = await axiosClient.get<Enrollment[]>("/admin/enrollments");
   return data;
 }
 
 async function createEnrollment(payload: EnrollmentInput): Promise<Enrollment> {
-  const { data } = await axiosClient.post<Enrollment>("/api/admin/enrollments", payload);
+  const { data } = await axiosClient.post<Enrollment>("/admin/enrollments", payload);
   return data;
 }
 
@@ -37,12 +37,12 @@ async function updateEnrollment({
   id: string;
   payload: Pick<EnrollmentInput, "status">;
 }): Promise<Enrollment> {
-  const { data } = await axiosClient.put<Enrollment>(`/api/admin/enrollments/${id}`, payload);
+  const { data } = await axiosClient.put<Enrollment>(`/admin/enrollments/${id}`, payload);
   return data;
 }
 
 async function deleteEnrollment(id: string): Promise<Enrollment> {
-  const { data } = await axiosClient.delete<Enrollment>(`/api/admin/enrollments/${id}`);
+  const { data } = await axiosClient.delete<Enrollment>(`/admin/enrollments/${id}`);
   return data;
 }
 

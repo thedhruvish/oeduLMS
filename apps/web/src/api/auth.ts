@@ -17,7 +17,7 @@ export const authKeys = {
 
 async function fetchMe(): Promise<AuthState> {
   try {
-    const { data } = await axiosClient.get<AuthState>("/api/me");
+    const { data } = await axiosClient.get<AuthState>("/me");
     return data;
   } catch {
     return { user: null, role: null };
@@ -48,8 +48,8 @@ export const useLogin = () => {
         throw new Error(error.message || "Failed to sign in");
       }
 
-      // Fetch fresh /api/me state immediately to resolve the role
-      const meResponse = await axiosClient.get<AuthState>("/api/me");
+      // Fetch fresh /me state immediately to resolve the role
+      const meResponse = await axiosClient.get<AuthState>("/me");
       return meResponse.data;
     },
     onSuccess: (data) => {

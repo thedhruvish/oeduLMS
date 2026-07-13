@@ -20,7 +20,7 @@ export async function uploadFileToS3(
   onProgress?: UploadProgressCallback
 ): Promise<PresignResponse> {
   // 1. Fetch presigned upload URL from the server
-  const { data } = await axiosClient.post<PresignResponse>("/api/admin/media/presign-upload", {
+  const { data } = await axiosClient.post<PresignResponse>("/admin/media/presign-upload", {
     filename: file.name,
     contentType: file.type,
     directory,
@@ -48,7 +48,7 @@ export async function uploadFileToS3(
  * Delete S3 media object from bucket
  */
 export async function deleteFileFromS3(key: string): Promise<void> {
-  await axiosClient.delete("/api/admin/media", {
+  await axiosClient.delete("/admin/media", {
     data: { key },
   });
 }

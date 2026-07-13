@@ -45,27 +45,27 @@ function normalizeCourse(c: Course): Course {
 }
 
 async function fetchCourses(): Promise<Course[]> {
-  const { data } = await axiosClient.get<Course[]>("/api/admin/courses");
+  const { data } = await axiosClient.get<Course[]>("/admin/courses");
   return data.map(normalizeCourse);
 }
 
 async function fetchCourseById(id: string): Promise<Course> {
-  const { data } = await axiosClient.get<Course>(`/api/admin/courses/${id}`);
+  const { data } = await axiosClient.get<Course>(`/admin/courses/${id}`);
   return normalizeCourse(data);
 }
 
 async function createCourse(payload: CreateCoursePayload): Promise<Course> {
-  const { data } = await axiosClient.post<Course>("/api/admin/courses", payload);
+  const { data } = await axiosClient.post<Course>("/admin/courses", payload);
   return normalizeCourse(data);
 }
 
 async function updateCourse(id: string, payload: UpdateCoursePayload): Promise<Course> {
-  const { data } = await axiosClient.put<Course>(`/api/admin/courses/${id}`, payload);
+  const { data } = await axiosClient.put<Course>(`/admin/courses/${id}`, payload);
   return normalizeCourse(data);
 }
 
 async function deleteCourse(id: string): Promise<void> {
-  await axiosClient.delete(`/api/admin/courses/${id}`);
+  await axiosClient.delete(`/admin/courses/${id}`);
 }
 
 export function useCourses() {

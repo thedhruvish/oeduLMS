@@ -17,16 +17,16 @@ export interface Student {
 }
 
 async function fetchStudents(): Promise<Student[]> {
-  const { data } = await axiosClient.get<Student[]>("/api/admin/students");
+  const { data } = await axiosClient.get<Student[]>("/admin/students");
   return data;
 }
 
 async function banStudent({ id, reason }: { id: string; reason?: string }): Promise<void> {
-  await axiosClient.post(`/api/admin/students/${id}/ban`, { reason });
+  await axiosClient.post(`/admin/students/${id}/ban`, { reason });
 }
 
 async function unbanStudent(id: string): Promise<void> {
-  await axiosClient.post(`/api/admin/students/${id}/unban`);
+  await axiosClient.post(`/admin/students/${id}/unban`);
 }
 
 export function useStudents() {
