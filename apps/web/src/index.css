@@ -1,1 +1,2 @@
 @import "@oedulms/ui/globals.css";
+@source "../../../packages/dvideo/src/**/*.{ts,tsx}";
