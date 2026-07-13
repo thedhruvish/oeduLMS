@@ -3,7 +3,6 @@ import { Plus, Edit2, Eye, Trash2, BookOpen, AlertCircle, IndianRupee } from "lu
 import { toast } from "sonner";
 
 import { Button } from "@oedulms/ui/components/button";
-import { Badge } from "@oedulms/ui/components/badge";
 import { Card, CardContent } from "@oedulms/ui/components/card";
 import { useCourses, useDeleteCourse } from "@/api/courses";
 import { useConfirm } from "@/store/confirm-store";
@@ -110,13 +109,6 @@ function AdminCoursesListComponent() {
 
               <CardContent className="p-4 flex flex-col gap-3">
                 <h3 className="font-semibold text-foreground truncate">{course.title}</h3>
-
-                <div className="flex items-center gap-2">
-                  <Badge variant={course.status === "PUBLISHED" ? "default" : "secondary"}>
-                    {course.status === "PUBLISHED" ? "Published" : "Draft"}
-                  </Badge>
-                  <Badge variant="outline">{course.level.toLowerCase()}</Badge>
-                </div>
 
                 <div className="text-sm font-medium">
                   {course.price === 0 ? (

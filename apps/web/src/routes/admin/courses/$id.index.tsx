@@ -6,7 +6,6 @@ import {
   BookOpen,
   Clock,
   Globe,
-  BarChart2,
   Video,
   Award,
   List,
@@ -201,14 +200,6 @@ function AdminCourseDetailComponent() {
               <Badge variant={course.status === "PUBLISHED" ? "default" : "secondary"}>
                 {course.status}
               </Badge>
-            </div>
-
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground flex items-center gap-1.5">
-                <BarChart2 className="size-4" />
-                Difficulty:
-              </span>
-              <span className="font-medium capitalize">{course.level.toLowerCase()}</span>
             </div>
 
             <div className="flex justify-between items-center text-sm">

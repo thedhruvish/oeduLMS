@@ -1,7 +1,6 @@
 import * as React from "react";
 import { GripVertical, Film, ArrowUp, ArrowDown, Edit, Trash2 } from "lucide-react";
 import { Button } from "@oedulms/ui/components/button";
-import { Switch } from "@oedulms/ui/components/switch";
 import { SortableItemHandle } from "@oedulms/ui/components/reui/sortable";
 import type { Section, Lecture } from "@/api/curriculum";
 import { cn } from "@oedulms/ui/lib/utils";
@@ -13,7 +12,6 @@ interface LectureItemProps {
   onEditLecture: (lecture: Lecture, sectionId: string) => void;
   onDeleteLecture: (sectionId: string, id: string) => void;
   onMoveLecture: (section: Section, index: number, direction: "up" | "down") => void;
-  onToggleLectureStatus: (lecture: Lecture, sectionId: string, isPublished: boolean) => void;
 }
 
 export function LectureItem({
@@ -23,7 +21,6 @@ export function LectureItem({
   onEditLecture,
   onDeleteLecture,
   onMoveLecture,
-  onToggleLectureStatus,
 }: LectureItemProps) {
   const formatDuration = (sec: number) => {
     const hrs = Math.floor(sec / 3600);
@@ -79,15 +76,6 @@ export function LectureItem({
       </div>
 
       <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end sm:justify-start flex-wrap">
-        <div className="flex items-center gap-1 shrink-0 mr-1.5">
-          <Switch
-            checked={lecture.publishedAt !== null}
-            onCheckedChange={(checked) => {
-              onToggleLectureStatus(lecture, section.id, checked);
-            }}
-            className="scale-75 cursor-pointer"
-          />
-        </div>
         <Button
           type="button"
           size="icon"

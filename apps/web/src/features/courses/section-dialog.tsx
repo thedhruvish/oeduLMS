@@ -44,7 +44,8 @@ export function SectionDialog({
       title: editingSection?.title || "",
       description: editingSection?.description || "",
       publishMode: editingSection?.publishMode || "AFTER_TRANSCODE",
-      publishedAt: editingSection?.publishedAt || null,
+      publishedAt:
+        editingSection?.publishedAt || (editingSection ? null : new Date().toISOString()),
     } as SectionInput,
     onSubmit: async ({ value }) => {
       if (!value.title || value.title.trim().length < 3) {
@@ -56,7 +57,12 @@ export function SectionDialog({
           title: value.title,
           description: value.description || null,
           publishMode: value.publishMode,
-          publishedAt: value.publishedAt || null,
+          publishedAt:
+            value.publishMode === "AFTER_TRANSCODE"
+              ? value.publishedAt || new Date().toISOString()
+              : value.publishMode === "DRAFT"
+                ? null
+                : value.publishedAt || null,
         };
 
         if (editingSection) {
@@ -173,7 +179,7 @@ export function SectionDialog({
                             )}
                             onClick={() => {
                               fieldMode.handleChange("AFTER_TRANSCODE");
-                              fieldDate.handleChange(null);
+                              fieldDate.handleChange(new Date().toISOString());
                             }}
                           >
                             <div className="size-3.5 rounded-full border border-primary flex items-center justify-center shrink-0">

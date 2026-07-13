@@ -32,12 +32,12 @@ function AdminEditCourseComponent() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6 max-w-2xl animate-pulse">
+      <div className="flex flex-col gap-6 w-full h-full animate-pulse">
         <div className="flex gap-4 items-center">
           <div className="size-8 bg-muted rounded" />
-          <div className="h-6 w-32 bg-muted rounded" />
+          <div className="h-6 w-48 bg-muted rounded" />
         </div>
-        <div className="h-96 bg-card border rounded-lg" />
+        <div className="flex-1 bg-card border rounded-lg" />
       </div>
     );
   }
@@ -76,7 +76,6 @@ function AdminEditCourseComponent() {
     durationSeconds: course.durationSeconds || 0,
     totalLectures: course.totalLectures || 0,
     certificateEnabled: course.certificateEnabled || false,
-    level: course.level,
     status: course.status,
     language: course.language || "",
     validateDays: course.validateDays ?? null,

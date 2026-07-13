@@ -3,7 +3,6 @@ import { GripVertical, ArrowUp, ArrowDown, Edit, Trash2, Plus, Film } from "luci
 import { Card, CardHeader, CardTitle, CardContent } from "@oedulms/ui/components/card";
 import { Button } from "@oedulms/ui/components/button";
 import { Badge } from "@oedulms/ui/components/badge";
-import { Switch } from "@oedulms/ui/components/switch";
 import { Sortable, SortableItem, SortableItemHandle } from "@oedulms/ui/components/reui/sortable";
 import type { Section, Lecture } from "@/api/curriculum";
 import { LectureItem } from "./lecture-item";
@@ -22,8 +21,6 @@ interface SectionCardProps {
   onDeleteLecture: (sectionId: string, id: string) => void;
   onMoveLecture: (section: Section, index: number, direction: "up" | "down") => void;
   onDragEndLecture: (sectionId: string, updatedLectures: Lecture[]) => void;
-  onToggleSectionStatus: (section: Section, isPublished: boolean) => void;
-  onToggleLectureStatus: (lecture: Lecture, sectionId: string, isPublished: boolean) => void;
 }
 
 export function SectionCard({
@@ -39,8 +36,6 @@ export function SectionCard({
   onDeleteLecture,
   onMoveLecture,
   onDragEndLecture,
-  onToggleSectionStatus,
-  onToggleLectureStatus,
 }: SectionCardProps) {
   const isSectionPublished =
     section.publishMode === "AFTER_TRANSCODE" ||
@@ -88,15 +83,6 @@ export function SectionCard({
         </div>
 
         <div className="flex items-center gap-1 w-full sm:w-auto justify-end sm:justify-start flex-wrap">
-          <div className="flex items-center gap-1 shrink-0 mr-1.5">
-            <Switch
-              checked={section.publishMode === "AFTER_TRANSCODE" || section.publishedAt !== null}
-              onCheckedChange={(checked) => {
-                onToggleSectionStatus(section, checked);
-              }}
-              className="scale-75 cursor-pointer"
-            />
-          </div>
           <Button
             type="button"
             size="icon"
@@ -178,7 +164,6 @@ export function SectionCard({
                   onEditLecture={onEditLecture}
                   onDeleteLecture={onDeleteLecture}
                   onMoveLecture={onMoveLecture}
-                  onToggleLectureStatus={onToggleLectureStatus}
                 />
               </SortableItem>
             ))}

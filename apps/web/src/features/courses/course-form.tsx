@@ -1,6 +1,17 @@
 import { useForm } from "@tanstack/react-form";
-import { Plus, Trash2, ChevronDown, ChevronUp, HelpCircle, Info } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  HelpCircle,
+  Info,
+  Upload,
+  Link2,
+} from "lucide-react";
 import * as React from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { cn } from "@oedulms/ui/lib/utils";
 
 import { courseSchema, type CourseInput, type FaqInput } from "@oedulms/validator";
 import { Field, FieldLabel } from "@oedulms/ui/components/field";
@@ -159,6 +170,22 @@ export function CourseForm({
   formRef,
 }: CourseFormProps) {
   const [faqOpen, setFaqOpen] = React.useState(true);
+  const [videoSource, setVideoSource] = React.useState<"upload" | "link">(() => {
+    const url = defaultValues.trailerVideo || "";
+    if (url && !url.includes("/trailers/")) {
+      return "link";
+    }
+    return "upload";
+  });
+
+  React.useEffect(() => {
+    const url = defaultValues.trailerVideo || "";
+    if (url && !url.includes("/trailers/")) {
+      setVideoSource("link");
+    } else {
+      setVideoSource("upload");
+    }
+  }, [defaultValues.trailerVideo]);
 
   const form = useForm({
     defaultValues,
@@ -249,7 +276,7 @@ export function CourseForm({
               {(field) => {
                 const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                 return (
-                  <Field data-invalid={isInvalid}>
+                  <Field data-invalid={isInvalid} className="max-w-md">
                     <FieldLabel htmlFor={field.name}>Thumbnail Image</FieldLabel>
                     <MediaUploader
                       value={field.state.value}
@@ -268,14 +295,84 @@ export function CourseForm({
               {(field) => {
                 const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                 return (
-                  <Field data-invalid={isInvalid}>
+                  <Field data-invalid={isInvalid} className="max-w-md">
                     <FieldLabel htmlFor={field.name}>Trailer Video</FieldLabel>
-                    <MediaUploader
-                      value={field.state.value}
-                      onChange={(url) => field.handleChange(url)}
-                      acceptType="video"
-                      directory="trailers"
-                    />
+
+                    <div className="grid grid-cols-2 gap-1 p-1 bg-muted/60 border border-border rounded-lg w-full max-w-[280px] mb-3">
+                      <button
+                        type="button"
+                        onClick={() => setVideoSource("upload")}
+                        className={cn(
+                          "text-xs font-semibold py-1.5 px-3 rounded-md transition duration-200 cursor-pointer flex items-center justify-center gap-1.5",
+                          videoSource === "upload"
+                            ? "bg-background text-foreground shadow-sm font-bold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        )}
+                      >
+                        <Upload className="size-3.5" />
+                        <span>Upload File</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVideoSource("link")}
+                        className={cn(
+                          "text-xs font-semibold py-1.5 px-3 rounded-md transition duration-200 cursor-pointer flex items-center justify-center gap-1.5",
+                          videoSource === "link"
+                            ? "bg-background text-foreground shadow-sm font-bold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        )}
+                      >
+                        <Link2 className="size-3.5" />
+                        <span>Direct Link</span>
+                      </button>
+                    </div>
+
+                    <AnimatePresence mode="wait">
+                      {videoSource === "upload" ? (
+                        <motion.div
+                          key="upload"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <MediaUploader
+                            value={field.state.value}
+                            onChange={(url) => field.handleChange(url)}
+                            acceptType="video"
+                            directory="trailers"
+                          />
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="link"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex flex-col gap-2"
+                        >
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            placeholder="Enter direct video URL (e.g. https://domain.com/video.mp4)"
+                            value={field.state.value || ""}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            disabled={isPending}
+                          />
+                          {field.state.value && (
+                            <div className="border rounded-lg overflow-hidden bg-muted/30 aspect-video flex items-center justify-center">
+                              <video
+                                src={field.state.value}
+                                controls
+                                className="size-full bg-black object-contain"
+                              />
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     <FormError isInvalid={isInvalid} errors={field.state.meta.errors} />
                   </Field>
                 );

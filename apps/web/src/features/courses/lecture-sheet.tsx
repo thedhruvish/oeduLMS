@@ -16,7 +16,7 @@ import { Input } from "@oedulms/ui/components/input";
 import { Textarea } from "@oedulms/ui/components/textarea";
 import { Switch } from "@oedulms/ui/components/switch";
 import { Button } from "@oedulms/ui/components/button";
-import { Checkbox } from "@oedulms/ui/components/checkbox";
+
 import {
   Loader2,
   Trash2,
@@ -24,7 +24,6 @@ import {
   Upload,
   Sliders,
   Settings,
-  ChevronDown,
   Download,
   Link2,
 } from "lucide-react";
@@ -35,7 +34,7 @@ import { useConfirm } from "@/store/confirm-store";
 import { useCreateLecture, useUpdateLecture, type Lecture } from "@/api/curriculum";
 import { uploadFileToS3 } from "@/api/media";
 import { cn } from "@oedulms/ui/lib/utils";
-import { Popover, PopoverTrigger, PopoverContent } from "@oedulms/ui/components/popover";
+
 import { DatePickerTime } from "@/components/ui/date-picker-time";
 
 const allQualityOptions = [
@@ -95,7 +94,8 @@ export function LectureSheet({
       thumbnail: editingLecture?.thumbnail || "",
       isPreview: editingLecture?.isPreview || false,
       publishMode: editingLecture?.publishMode || "AFTER_TRANSCODE",
-      publishedAt: editingLecture?.publishedAt || null,
+      publishedAt:
+        editingLecture?.publishedAt || (editingLecture ? null : new Date().toISOString()),
       qualities: editingLecture?.qualities || ["360p", "720p", "1080p"],
       resources: editingLecture?.resources || [],
       duration: editingLecture?.duration || 0,
@@ -112,7 +112,12 @@ export function LectureSheet({
         thumbnail: value.thumbnail || null,
         isPreview: value.isPreview,
         publishMode: value.publishMode,
-        publishedAt: value.publishedAt || null,
+        publishedAt:
+          value.publishMode === "AFTER_TRANSCODE"
+            ? value.publishedAt || new Date().toISOString()
+            : value.publishMode === "DRAFT"
+              ? null
+              : value.publishedAt || null,
         qualities: value.qualities || [],
         resources: value.resources || [],
         duration: value.duration ?? 0,
@@ -508,63 +513,37 @@ export function LectureSheet({
                         {(field) => {
                           const selectedQualities = field.state.value || [];
 
-                          const handleCheckboxChange = (val: string, checked: boolean) => {
-                            if (checked) {
-                              field.handleChange([...selectedQualities, val]);
-                            } else {
+                          const handleToggleQuality = (val: string) => {
+                            const isChecked = selectedQualities.includes(val);
+                            if (isChecked) {
                               field.handleChange(
                                 selectedQualities.filter((q: string) => q !== val)
                               );
+                            } else {
+                              field.handleChange([...selectedQualities, val]);
                             }
                           };
 
-                          const displayLabel =
-                            selectedQualities.length > 0
-                              ? selectedQualities.join(", ")
-                              : "Select qualities...";
-
                           return (
-                            <div className="flex flex-col gap-1.5">
-                              <Popover>
-                                <PopoverTrigger
-                                  render={
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      className="w-full justify-between font-normal h-9 text-xs cursor-pointer px-3 border border-input bg-transparent"
-                                    />
-                                  }
-                                >
-                                  <span className="truncate pr-4">{displayLabel}</span>
-                                  <ChevronDown className="size-4 text-muted-foreground shrink-0" />
-                                </PopoverTrigger>
-                                <PopoverContent className="w-full p-3 flex flex-col gap-2">
-                                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                    Select Qualities
-                                  </span>
-                                  <ScrollArea className="h-[200px] pr-2">
-                                    <div className="flex flex-col gap-1">
-                                      {allQualityOptions.map((opt) => {
-                                        const isChecked = selectedQualities.includes(opt.value);
-                                        return (
-                                          <label
-                                            key={opt.value}
-                                            className="flex items-center gap-2 text-xs text-foreground cursor-pointer select-none py-1.5 px-2 hover:bg-muted rounded-md transition"
-                                          >
-                                            <Checkbox
-                                              checked={isChecked}
-                                              onCheckedChange={(checked) =>
-                                                handleCheckboxChange(opt.value, !!checked)
-                                              }
-                                            />
-                                            <span>{opt.label}</span>
-                                          </label>
-                                        );
-                                      })}
-                                    </div>
-                                  </ScrollArea>
-                                </PopoverContent>
-                              </Popover>
+                            <div className="flex flex-wrap gap-1.5 bg-background/50 border rounded-lg p-3">
+                              {allQualityOptions.map((opt) => {
+                                const isChecked = selectedQualities.includes(opt.value);
+                                return (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => handleToggleQuality(opt.value)}
+                                    className={cn(
+                                      "text-[10px] sm:text-xs font-semibold px-2.5 py-1 rounded-full border transition cursor-pointer select-none",
+                                      isChecked
+                                        ? "bg-primary/10 text-primary border-primary/30"
+                                        : "bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                                    )}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                );
+                              })}
                             </div>
                           );
                         }}
@@ -699,7 +678,7 @@ export function LectureSheet({
                                     )}
                                     onClick={() => {
                                       fieldMode.handleChange("AFTER_TRANSCODE");
-                                      fieldDate.handleChange(null);
+                                      fieldDate.handleChange(new Date().toISOString());
                                     }}
                                   >
                                     <div className="size-4 rounded-full border border-primary flex items-center justify-center shrink-0 mt-0.5">

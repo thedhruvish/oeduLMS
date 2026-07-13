@@ -10,7 +10,6 @@ import { ScrollArea } from "@oedulms/ui/components/scroll-area";
 import {
   useGetCurriculum,
   useDeleteSection,
-  useUpdateSection,
   useUpdateLecture,
   useDeleteLecture,
   useReorderSections,
@@ -45,58 +44,11 @@ export const CurriculumBuilder = React.forwardRef<CurriculumBuilderRef, Curricul
     } = useGetCurriculum(courseId);
 
     const deleteSection = useDeleteSection(courseId);
-    const updateSection = useUpdateSection(courseId);
     const reorderSections = useReorderSections(courseId);
 
     const updateLecture = useUpdateLecture(courseId);
     const deleteLecture = useDeleteLecture(courseId);
     const reorderLectures = useReorderLectures(courseId);
-
-    // Toggle status handlers
-    const handleToggleSectionStatus = async (section: Section, checked: boolean) => {
-      const publishMode = checked ? "AFTER_TRANSCODE" : "DRAFT";
-      const publishedAt = null;
-
-      const toastId = toast.loading("Updating section status...");
-      try {
-        await updateSection.mutateAsync({
-          id: section.id,
-          values: { publishMode, publishedAt },
-          skipInvalidate: false,
-        });
-        toast.success(`Section status updated to ${checked ? "Published" : "Draft"}!`, {
-          id: toastId,
-        });
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Failed to update section status.";
-        toast.error(msg, { id: toastId });
-      }
-    };
-
-    const handleToggleLectureStatus = async (
-      lecture: Lecture,
-      sectionId: string,
-      checked: boolean
-    ) => {
-      const publishMode = checked ? "AFTER_TRANSCODE" : "DRAFT";
-      const publishedAt = null;
-
-      const toastId = toast.loading("Updating lecture status...");
-      try {
-        await updateLecture.mutateAsync({
-          sectionId,
-          id: lecture.id,
-          values: { publishMode, publishedAt },
-          skipInvalidate: false,
-        });
-        toast.success(`Lecture status updated to ${checked ? "Published" : "Draft"}!`, {
-          id: toastId,
-        });
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Failed to update lecture status.";
-        toast.error(msg, { id: toastId });
-      }
-    };
 
     // Local state for Section dialogs
     const [sectionDialogOpen, setSectionDialogOpen] = React.useState(false);
@@ -392,8 +344,6 @@ export const CurriculumBuilder = React.forwardRef<CurriculumBuilderRef, Curricul
                       onDeleteLecture={handleDeleteLecture}
                       onMoveLecture={handleMoveLecture}
                       onDragEndLecture={handleLecturesReordered}
-                      onToggleSectionStatus={handleToggleSectionStatus}
-                      onToggleLectureStatus={handleToggleLectureStatus}
                     />
                   </SortableItem>
                 ))}
