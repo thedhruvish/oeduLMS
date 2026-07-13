@@ -3,6 +3,7 @@ import type { AppVariables } from "../types";
 import { authGuard } from "../middleware/auth";
 import { adminRouter } from "./admin";
 import { dashRouter } from "./dash";
+import { publicRouter } from "./public";
 
 /**
  * Main API router.
@@ -10,6 +11,9 @@ import { dashRouter } from "./dash";
  * Sub-routers can add further role-based guards as needed.
  */
 export const apiRouter = new Hono<AppVariables>();
+
+// Public API routes
+apiRouter.route("/public", publicRouter);
 
 // Single shared auth check for all /api/admin and /api/dash routes
 apiRouter.use("*", authGuard);
