@@ -18,6 +18,10 @@ export interface Enrollment {
     name: string;
     email: string;
   };
+  payment?: {
+    id: string;
+    amount: number;
+  } | null;
 }
 
 async function fetchEnrollments(): Promise<Enrollment[]> {
@@ -80,5 +84,42 @@ export function useDeleteEnrollment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: enrollmentsKeys.all });
     },
+  });
+}
+
+async function refundEnrollment({
+  id,
+  amount,
+}: {
+  id: string;
+  amount?: number;
+}): Promise<Enrollment> {
+  const { data } = await axiosClient.post<Enrollment>(`/admin/enrollments/${id}/refund`, {
+    amount,
+  });
+  return data;
+}
+
+export function useRefundEnrollment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: refundEnrollment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: enrollmentsKeys.all });
+    },
+  });
+}
+
+export function useCheckEnrollment(courseIdOrSlug: string, enabled: boolean) {
+  return useQuery<{ isEnrolled: boolean }>({
+    queryKey: ["check-enrollment", courseIdOrSlug],
+    queryFn: async () => {
+      const { data } = await axiosClient.get<{ isEnrolled: boolean }>(
+        `/dash/enrollments/${courseIdOrSlug}/check`
+      );
+      return data;
+    },
+    enabled: enabled && !!courseIdOrSlug,
+    retry: false,
   });
 }

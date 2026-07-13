@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "@tanstack/react-form";
-import { CreditCard, ArrowRight, Loader2 } from "lucide-react";
+import { CreditCard, ArrowRight } from "lucide-react";
+import { Spinner } from "@oedulms/ui/components/spinner";
 import { AxiosError } from "axios";
 import { Button } from "@oedulms/ui/components/button";
 import { Field, FieldGroup, FieldLabel } from "@oedulms/ui/components/field";
@@ -8,6 +9,7 @@ import { Input } from "@oedulms/ui/components/input";
 import { FormError } from "@/components/ui/form-error";
 import { useValidatePublicCoupon } from "@/api/coupons";
 import { useMe } from "@/api/auth";
+import { useCheckEnrollment } from "@/api/enrollments";
 import { billingSchema } from "@oedulms/validator/public";
 import type { PublicCouponValidation } from "@/types/public";
 
@@ -18,53 +20,9 @@ interface CheckoutSidebarProps {
   discountPrice?: number | null; // final price in INR
 }
 
-interface RazorpayResponse {
-  rayorpay_payment_id?: string;
-  razorpay_payment_id?: string;
-}
-
-interface RazorpayOptions {
-  key: string;
-  amount: number;
-  currency: string;
-  name: string;
-  description: string;
-  handler: (response: RazorpayResponse) => void;
-  prefill: {
-    name: string;
-    email: string;
-    contact: string;
-  };
-  modal?: {
-    ondismiss?: () => void;
-  };
-  theme: {
-    color: string;
-  };
-}
-
-interface RazorpayInstance {
-  open: () => void;
-}
-
-interface RazorpayWindow extends Window {
-  Razorpay?: new (options: RazorpayOptions) => RazorpayInstance;
-}
-
-function loadRazorpayScript(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const rzWindow = window as unknown as RazorpayWindow;
-    if (rzWindow.Razorpay) {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
+import { triggerRazorpayCheckout } from "@/lib/razorpay";
+import { useCreateOrder, useVerifyPayment } from "@/api/payments";
+import { useConfirm } from "@/store/confirm-store";
 
 export function CheckoutSidebar({
   courseId,
@@ -72,8 +30,17 @@ export function CheckoutSidebar({
   coursePrice,
   discountPrice,
 }: CheckoutSidebarProps) {
-  const { data: auth } = useMe();
+  const { data: auth, isLoading: isAuthLoading } = useMe();
   const validateCoupon = useValidatePublicCoupon();
+  const { data: enrollmentCheck, isLoading: isEnrollmentChecking } = useCheckEnrollment(
+    courseId,
+    !!auth?.user
+  );
+  const isChecking = isAuthLoading || (!!auth?.user && isEnrollmentChecking);
+  const isEnrolled = !!enrollmentCheck?.isEnrolled;
+  const createOrderMutation = useCreateOrder();
+  const verifyPaymentMutation = useVerifyPayment();
+  const confirm = useConfirm();
 
   // Coupon calculations
   const [couponCode, setCouponCode] = useState("");
@@ -81,6 +48,11 @@ export function CheckoutSidebar({
   const [appliedCoupon, setAppliedCoupon] = useState("");
   const [couponError, setCouponError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [successInfo, setSuccessInfo] = useState<{
+    success: boolean;
+    isNewUser: boolean;
+    email: string;
+  } | null>(null);
 
   const basePrice = coursePrice;
   const isDiscounted =
@@ -106,50 +78,97 @@ export function CheckoutSidebar({
     onSubmit: async ({ value }) => {
       setIsProcessing(true);
       try {
-        const scriptLoaded = await loadRazorpayScript();
-        if (!scriptLoaded) {
-          alert("Razorpay checkout failed to load. Please verify your connection.");
-          setIsProcessing(false);
-          return;
-        }
+        // 1. Create order on the backend using TanStack Mutation
+        const orderData = await createOrderMutation.mutateAsync({
+          courseId,
+          couponCode: appliedCoupon || undefined,
+          userId: auth?.user?.id || undefined,
+          name: value.name,
+          email: value.email,
+          mobile: value.mobile,
+        });
 
-        const rzWindow = window as unknown as RazorpayWindow;
-        if (!rzWindow.Razorpay) {
-          setIsProcessing(false);
-          return;
-        }
-
-        const options: RazorpayOptions = {
-          key: "rzp_test_defaultkey", // Test gateway credentials
-          amount: finalAmount * 100, // amount in paisa (1 INR = 100 Paisa)
-          currency: "INR",
-          name: "ProTech",
-          description: `Enrollment for ${courseTitle}`,
-          handler: (response) => {
-            setIsProcessing(false);
-            alert(
-              `Payment transaction successful! Payment ID: ${response.razorpay_payment_id || response.rayorpay_payment_id}`
-            );
-          },
+        // 2. Open Razorpay payment gateway using the trigger utility helper
+        await triggerRazorpayCheckout({
+          keyId: orderData.keyId,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          orderId: orderData.orderId,
+          courseTitle: courseTitle,
           prefill: {
             name: value.name,
             email: value.email,
-            contact: value.mobile,
+            contact: `+91${value.mobile}`,
           },
-          modal: {
-            ondismiss: () => {
-              setIsProcessing(false);
-            },
-          },
-          theme: {
-            color: "#09090b",
-          },
-        };
+          onSuccess: async (response) => {
+            try {
+              setIsProcessing(true);
 
-        const rzp = new rzWindow.Razorpay(options);
-        rzp.open();
+              // 3. Verify signature on the backend using TanStack Mutation
+              const verifyData = await verifyPaymentMutation.mutateAsync({
+                paymentId: orderData.paymentId,
+                razorpayPaymentId:
+                  response.razorpay_payment_id || response.rayorpay_payment_id || "",
+                razorpayOrderId: orderData.orderId,
+                razorpaySignature: response.razorpay_signature || "",
+              });
+
+              setIsProcessing(false);
+
+              if (verifyData.success) {
+                setSuccessInfo({
+                  success: true,
+                  isNewUser: verifyData.isNewUser,
+                  email: verifyData.email,
+                });
+              } else {
+                await confirm({
+                  title: "Payment Verification Failed",
+                  desc: verifyData.error || "Unknown payment verification error.",
+                  confirmText: "Close",
+                  destructive: true,
+                });
+              }
+            } catch (verifyErr: unknown) {
+              setIsProcessing(false);
+              const axiosErr = verifyErr as AxiosError<{ error?: string; message?: string }>;
+              const errMsg =
+                axiosErr.response?.data?.error ||
+                axiosErr.response?.data?.message ||
+                axiosErr.message ||
+                "Verification failed";
+              await confirm({
+                title: "Payment Verification Error",
+                desc: errMsg,
+                confirmText: "Close",
+                destructive: true,
+              });
+            }
+          },
+          onDismiss: () => {
+            setIsProcessing(false);
+          },
+          onLoadFailed: async () => {
+            await confirm({
+              title: "Razorpay Failed to Load",
+              desc: "Razorpay checkout failed to load. Please verify your connection.",
+              confirmText: "Close",
+              destructive: true,
+            });
+            setIsProcessing(false);
+          },
+        });
       } catch (err: unknown) {
         setIsProcessing(false);
+        const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+        const serverMsg =
+          axiosErr.response?.data?.error || axiosErr.response?.data?.message || axiosErr.message;
+        await confirm({
+          title: "Order Creation Failed",
+          desc: serverMsg || "Please check your inputs and try again.",
+          confirmText: "Close",
+          destructive: true,
+        });
         console.error("Razorpay trigger error:", err);
       }
     },
@@ -197,6 +216,67 @@ export function CheckoutSidebar({
     );
   };
 
+  if (successInfo) {
+    return (
+      <div className="rounded-2xl border border-emerald-500/20 bg-card p-6 shadow-xl relative overflow-hidden text-center space-y-6">
+        <div className="mx-auto my-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
+          <svg
+            className="h-8 w-8 animate-bounce"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="3"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="font-extrabold text-xl text-foreground">Purchase Successful!</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            You have successfully purchased and enrolled in{" "}
+            <strong className="text-foreground">{courseTitle}</strong>.
+          </p>
+        </div>
+
+        {successInfo.isNewUser && (
+          <div className="rounded-xl bg-muted/40 p-4 text-left border border-border/40 space-y-3">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              Access Details
+            </p>
+            <div className="space-y-2 text-xs text-foreground/90">
+              <p>
+                We have generated a new account for you. A temporary password has been sent to your
+                email:
+              </p>
+              <p className="font-mono font-bold text-xs text-primary break-all bg-background px-3 py-2 rounded-lg border border-border">
+                {successInfo.email}
+              </p>
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                Please check your inbox (and spam/promotions folder) for your temporary password to
+                login.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <Button
+          onClick={() => {
+            if (auth?.user) {
+              window.location.href = "/dash";
+            } else {
+              window.location.href = `/auth/login?email=${encodeURIComponent(successInfo.email)}`;
+            }
+          }}
+          className="w-full h-11 bg-foreground text-background hover:bg-foreground/90 font-bold text-sm gap-2 mt-4"
+        >
+          {auth?.user ? "Go to Dashboard" : "Log In Now"}
+          <ArrowRight className="size-4" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-xl relative overflow-hidden">
       <h3 className="font-bold text-lg text-foreground mb-5 flex items-center gap-2">
@@ -233,7 +313,7 @@ export function CheckoutSidebar({
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      disabled={!!auth?.user || isProcessing}
+                      disabled={!!auth?.user || isProcessing || isEnrolled}
                       aria-invalid={isInvalid}
                       placeholder="John Doe"
                     />
@@ -257,7 +337,7 @@ export function CheckoutSidebar({
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      disabled={!!auth?.user || isProcessing}
+                      disabled={!!auth?.user || isProcessing || isEnrolled}
                       aria-invalid={isInvalid}
                       placeholder="you@example.com"
                     />
@@ -281,7 +361,7 @@ export function CheckoutSidebar({
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      disabled={isProcessing}
+                      disabled={isProcessing || isEnrolled}
                       aria-invalid={isInvalid}
                       placeholder="e.g. 9876543210"
                     />
@@ -310,7 +390,7 @@ export function CheckoutSidebar({
                 placeholder="Enter coupon code..."
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                disabled={isProcessing}
+                disabled={isProcessing || isEnrolled}
                 className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
               />
               <Button
@@ -318,7 +398,7 @@ export function CheckoutSidebar({
                 type="button"
                 variant="outline"
                 onClick={handleApplyCoupon}
-                disabled={validateCoupon.isPending || isProcessing}
+                disabled={validateCoupon.isPending || isProcessing || isEnrolled}
                 className="h-8 text-xs font-semibold px-4"
               >
                 {validateCoupon.isPending ? "Applying..." : "Apply"}
@@ -367,14 +447,21 @@ export function CheckoutSidebar({
         {/* Buy Course Submit Button */}
         <Button
           type="submit"
-          disabled={isProcessing || validateCoupon.isPending}
+          disabled={isProcessing || validateCoupon.isPending || isChecking || isEnrolled}
           className="w-full h-11 bg-foreground text-background hover:bg-foreground/90 font-bold text-sm gap-2 mt-4"
         >
           {isProcessing ? (
             <>
-              <Loader2 className="animate-spin size-4" />
+              <Spinner data-icon="inline-start" aria-hidden="true" />
               Processing payment...
             </>
+          ) : isChecking ? (
+            <>
+              <Spinner data-icon="inline-start" aria-hidden="true" />
+              Checking status...
+            </>
+          ) : isEnrolled ? (
+            <>Already Purchased</>
           ) : (
             <>
               Buy Course

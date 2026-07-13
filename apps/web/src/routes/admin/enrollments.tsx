@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   RotateCcw,
   Plus,
+  Undo,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -36,8 +37,12 @@ import {
   useEnrollments,
   useDeleteEnrollment,
   useUpdateEnrollment,
+  useRefundEnrollment,
   type Enrollment,
 } from "@/api/enrollments";
+import { useCourses } from "@/api/courses";
+import { cn } from "@oedulms/ui/lib/utils";
+import { AxiosError } from "axios";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { QueryBoundary } from "@/components/ui/query-boundary";
@@ -49,13 +54,19 @@ export const Route = createFileRoute("/admin/enrollments")({
 
 function AdminEnrollmentsComponent() {
   const { data: enrollments = [], isLoading, isError, error } = useEnrollments();
+  const { data: coursesData = [] } = useCourses();
   const deleteMutation = useDeleteEnrollment();
   const updateMutation = useUpdateEnrollment();
+  const refundMutation = useRefundEnrollment();
 
   const [searchTerm, setSearchTerm] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
+  const [courseFilter, setCourseFilter] = React.useState<string>("ALL");
   const [formOpen, setFormOpen] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<Enrollment | null>(null);
+  const [refundTarget, setRefundTarget] = React.useState<Enrollment | null>(null);
+  const [refundType, setRefundType] = React.useState<"full" | "partial">("full");
+  const [refundAmount, setRefundAmount] = React.useState<string>("");
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -65,6 +76,38 @@ function AdminEnrollmentsComponent() {
       setDeleteTarget(null);
     } catch {
       toast.error("Failed to delete enrollment.");
+    }
+  };
+
+  const handleRefundSubmit = async () => {
+    if (!refundTarget) return;
+    try {
+      const amount = refundType === "partial" ? parseFloat(refundAmount) : undefined;
+      if (refundType === "partial" && (isNaN(amount!) || amount! <= 0)) {
+        toast.error("Please enter a valid refund amount.");
+        return;
+      }
+      if (refundType === "partial" && refundTarget.payment) {
+        const paidAmount = refundTarget.payment.amount / 100;
+        if (amount! > paidAmount) {
+          toast.error(
+            `Refund amount cannot exceed the total amount paid (₹${paidAmount.toLocaleString()}).`
+          );
+          return;
+        }
+      }
+      await refundMutation.mutateAsync({
+        id: refundTarget.id,
+        amount,
+      });
+      toast.success("Payment refunded successfully.");
+      setRefundTarget(null);
+      setRefundAmount("");
+      setRefundType("full");
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      const msg = axiosErr.response?.data?.error || "Failed to process refund.";
+      toast.error(msg);
     }
   };
 
@@ -96,8 +139,9 @@ function AdminEnrollmentsComponent() {
       e.course.title.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === "ALL" || e.status === statusFilter.toLowerCase();
+    const matchesCourse = courseFilter === "ALL" || e.course.id === courseFilter;
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesCourse;
   });
 
   return (
@@ -137,6 +181,20 @@ function AdminEnrollmentsComponent() {
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
+          <Select value={courseFilter} onValueChange={(val) => setCourseFilter(val || "ALL")}>
+            <SelectTrigger className="w-full sm:w-[180px] bg-card">
+              <SelectValue placeholder="Filter by Course" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Courses</SelectItem>
+              {coursesData.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || "ALL")}>
             <SelectTrigger className="w-full sm:w-[150px] bg-card">
               <SelectValue placeholder="Filter status" />
@@ -180,6 +238,7 @@ function AdminEnrollmentsComponent() {
                   <TableHead className="pl-6">Student</TableHead>
                   <TableHead>Course</TableHead>
                   <TableHead className="text-center">Progress</TableHead>
+                  <TableHead className="text-center">Amount Paid</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="hidden md:table-cell">Enrolled On</TableHead>
                   <TableHead className="text-right pr-6">Actions</TableHead>
@@ -223,6 +282,10 @@ function AdminEnrollmentsComponent() {
                           {item.progress}% Complete
                         </span>
                       </div>
+                    </TableCell>
+
+                    <TableCell className="text-center font-medium text-foreground">
+                      {item.payment ? `₹${(item.payment.amount / 100).toLocaleString()}` : "—"}
                     </TableCell>
 
                     <TableCell className="text-center">
@@ -274,6 +337,17 @@ function AdminEnrollmentsComponent() {
                             <RotateCcw className="size-3.5" />
                           </Button>
                         )}
+                        {item.status !== "refunded" && (
+                          <Button
+                            size="icon-xs"
+                            variant="ghost"
+                            onClick={() => setRefundTarget(item)}
+                            title="Refund Payment"
+                            className="text-amber-600 hover:bg-amber-500/10 hover:text-amber-700"
+                          >
+                            <Undo className="size-3.5" />
+                          </Button>
+                        )}
                         <Button
                           size="icon-xs"
                           variant="ghost"
@@ -308,6 +382,83 @@ function AdminEnrollmentsComponent() {
         handleConfirm={handleDeleteConfirm}
         isLoading={deleteMutation.isPending}
       />
+
+      {/* Refund Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!refundTarget}
+        onOpenChange={(open) => !open && setRefundTarget(null)}
+        title="Refund Enrollment Payment"
+        desc={
+          <div className="space-y-1 text-start">
+            <p>
+              Select the refund type for student{" "}
+              <strong className="text-foreground">{refundTarget?.student.name}</strong> enrolled in{" "}
+              <strong className="text-foreground">{refundTarget?.course.title}</strong>.
+            </p>
+            {refundTarget?.payment ? (
+              <p className="text-xs text-muted-foreground mt-2">
+                Total amount paid:{" "}
+                <strong className="text-foreground font-semibold">
+                  ₹{(refundTarget.payment.amount / 100).toLocaleString()}
+                </strong>
+              </p>
+            ) : (
+              <p className="text-xs text-amber-600 font-medium mt-2">
+                No online payment associated with this enrollment.
+              </p>
+            )}
+          </div>
+        }
+        confirmText="Confirm Refund"
+        destructive
+        handleConfirm={handleRefundSubmit}
+        isLoading={refundMutation.isPending}
+      >
+        <div className="space-y-4 my-4">
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setRefundType("full")}
+              className={cn(
+                "flex-1 py-2 px-4 rounded-lg border text-sm font-semibold transition-all",
+                refundType === "full"
+                  ? "bg-destructive text-destructive-foreground border-destructive"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+              )}
+            >
+              Full Refund
+            </button>
+            <button
+              type="button"
+              onClick={() => setRefundType("partial")}
+              className={cn(
+                "flex-1 py-2 px-4 rounded-lg border text-sm font-semibold transition-all",
+                refundType === "partial"
+                  ? "bg-destructive text-destructive-foreground border-destructive"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+              )}
+            >
+              Partial Refund
+            </button>
+          </div>
+
+          {refundType === "partial" && (
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                Refund Amount (₹)
+              </label>
+              <Input
+                type="number"
+                placeholder="Enter custom amount to refund..."
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+                min="1"
+                className="bg-card w-full"
+              />
+            </div>
+          )}
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

@@ -104,7 +104,6 @@ adminCoursesRouter.post("/", zValidator("json", courseSchema), async (c) => {
       durationSeconds: body.durationSeconds,
       totalLectures: body.totalLectures,
       certificateEnabled: body.certificateEnabled,
-      level: body.level,
       status: body.status,
       language: body.language || null,
       validateDays: body.validateDays || null,
@@ -164,7 +163,6 @@ adminCoursesRouter.put("/:id", zValidator("json", courseSchema.partial()), async
   if (body.totalLectures !== undefined) updateValues.totalLectures = body.totalLectures;
   if (body.certificateEnabled !== undefined)
     updateValues.certificateEnabled = body.certificateEnabled;
-  if (body.level !== undefined) updateValues.level = body.level;
   if (body.status !== undefined) updateValues.status = body.status;
   if (body.language !== undefined) updateValues.language = body.language;
   if (body.validateDays !== undefined) updateValues.validateDays = body.validateDays;

@@ -22,6 +22,7 @@
     "dotenv": "catalog:",
     "evlog": "^2.18.1",
     "hono": "^4.8.2",
+    "resend": "^6.17.2",
     "zod": "catalog:"
   },
   "devDependencies": {
