@@ -23,11 +23,8 @@ adminCouponsRouter.get("/", async (c) => {
 
   const relationsMap: Record<string, string[]> = {};
   for (const rel of allRelations) {
-    if (!relationsMap[rel.couponId]) {
-      relationsMap[rel.couponId] = [];
-    }
-    relationsMap[rel.couponId].push(rel.courseId);
-  }
+  (relationsMap[rel.couponId] ??= []).push(rel.courseId);
+}
 
   const result = allCoupons.map((coupon) => ({
     ...coupon,
