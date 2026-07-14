@@ -123,3 +123,30 @@ export function useCheckEnrollment(courseIdOrSlug: string, enabled: boolean) {
     retry: false,
   });
 }
+
+export interface StudentEnrollment {
+  id: string;
+  progress: number;
+  status: string;
+  createdAt: string;
+  course: {
+    id: string;
+    title: string;
+    slug: string;
+    thumbnail?: string | null;
+    shortDescription?: string | null;
+    durationSeconds: number;
+  };
+}
+
+async function fetchStudentEnrollments(): Promise<StudentEnrollment[]> {
+  const { data } = await axiosClient.get<StudentEnrollment[]>("/dash/enrollments");
+  return data;
+}
+
+export function useStudentEnrollments() {
+  return useQuery({
+    queryKey: ["student-enrollments"],
+    queryFn: fetchStudentEnrollments,
+  });
+}
