@@ -1,6 +1,8 @@
 import axios from "axios";
 import { axiosClient } from "@/lib/axios-client";
 
+import { useAuthStore } from "@/store/auth/auth-store";
+
 export interface PresignResponse {
   uploadUrl: string;
   fileUrl: string;
@@ -19,8 +21,11 @@ export async function uploadFileToS3(
   directory: string = "general",
   onProgress?: UploadProgressCallback
 ): Promise<PresignResponse> {
+  const role = useAuthStore.getState().role;
+  const prefix = role === "TEACHER" ? "/admin" : "/dash";
+
   // 1. Fetch presigned upload URL from the server
-  const { data } = await axiosClient.post<PresignResponse>("/admin/media/presign-upload", {
+  const { data } = await axiosClient.post<PresignResponse>(`${prefix}/media/presign-upload`, {
     filename: file.name,
     contentType: file.type,
     directory,
@@ -48,7 +53,10 @@ export async function uploadFileToS3(
  * Delete S3 media object from bucket
  */
 export async function deleteFileFromS3(key: string): Promise<void> {
-  await axiosClient.delete("/admin/media", {
+  const role = useAuthStore.getState().role;
+  const prefix = role === "TEACHER" ? "/admin" : "/dash";
+
+  await axiosClient.delete(`${prefix}/media`, {
     data: { key },
   });
 }

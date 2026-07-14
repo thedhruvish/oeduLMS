@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { AppVariables } from "../types";
 import { getBucketName, getPublicFileUrl, getS3Client } from "@/utils/s3-client";
 
-export const adminMediaRouter = new Hono<AppVariables>();
+export const dashMediaRouter = new Hono<AppVariables>();
 
 const presignSchema = z.object({
   filename: z.string().min(1),
@@ -14,14 +14,13 @@ const presignSchema = z.object({
   directory: z.string().optional().default("general"),
 });
 
-// 1. POST /presign-upload — Generate S3 upload presigned URL
-adminMediaRouter.post("/presign-upload", zValidator("json", presignSchema), async (c) => {
+// 1. POST /presign-upload — Generate S3 upload presigned URL for students/general users
+dashMediaRouter.post("/presign-upload", zValidator("json", presignSchema), async (c) => {
   const { filename, contentType, directory } = c.req.valid("json");
   const s3 = getS3Client(c);
   const bucket = getBucketName(c);
 
   const uuid = crypto.randomUUID();
-  // Sanitize filename to avoid weird character issues in keys
   const safeName = filename.replace(/[^a-zA-Z0-9.-]/g, "_");
   const key = `${directory}/${uuid}-${safeName}`;
 
@@ -51,7 +50,7 @@ const deleteSchema = z.object({
 });
 
 // 2. DELETE / — Delete S3 object by key
-adminMediaRouter.delete("/", zValidator("json", deleteSchema), async (c) => {
+dashMediaRouter.delete("/", zValidator("json", deleteSchema), async (c) => {
   const { key } = c.req.valid("json");
   const s3 = getS3Client(c);
   const bucket = getBucketName(c);
