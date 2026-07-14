@@ -10,6 +10,7 @@ export interface ConfirmOptions {
   isLoading?: boolean;
   className?: string;
   children?: React.ReactNode;
+  closeOnConfirm?: boolean;
 }
 
 interface ConfirmState {
@@ -19,6 +20,8 @@ interface ConfirmState {
   confirm: (options: ConfirmOptions) => Promise<boolean>;
   onConfirm: () => void;
   onCancel: () => void;
+  setIsLoading: (isLoading: boolean) => void;
+  close: () => void;
 }
 
 export const useConfirmStore = create<ConfirmState>((set, get) => ({
@@ -29,19 +32,38 @@ export const useConfirmStore = create<ConfirmState>((set, get) => ({
     return new Promise<boolean>((resolve) => {
       set({
         isOpen: true,
-        options,
+        options: {
+          closeOnConfirm: true,
+          ...options,
+        },
         resolve,
       });
     });
   },
   onConfirm: () => {
-    const { resolve } = get();
+    const { resolve, options } = get();
     if (resolve) resolve(true);
-    set({ isOpen: false, options: null, resolve: null });
+    if (options?.closeOnConfirm !== false) {
+      set({ isOpen: false, options: null, resolve: null });
+    }
   },
   onCancel: () => {
     const { resolve } = get();
     if (resolve) resolve(false);
+    set({ isOpen: false, options: null, resolve: null });
+  },
+  setIsLoading: (isLoading) => {
+    const { options } = get();
+    if (options) {
+      set({
+        options: {
+          ...options,
+          isLoading,
+        },
+      });
+    }
+  },
+  close: () => {
     set({ isOpen: false, options: null, resolve: null });
   },
 }));
