@@ -1,5 +1,14 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Users, GraduationCap, LayoutDashboard, LogOut, Ticket } from "lucide-react";
+import {
+  BookOpen,
+  Users,
+  GraduationCap,
+  LayoutDashboard,
+  LogOut,
+  Ticket,
+  Settings,
+  MessageSquare,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -59,6 +68,16 @@ export function AdminSidebar() {
       title: "Enrollments",
       to: "/admin/enrollments",
       icon: GraduationCap,
+    },
+    {
+      title: "Settings",
+      to: "/admin/settings",
+      icon: Settings,
+    },
+    {
+      title: "Social Feed",
+      to: "/admin/feed",
+      icon: MessageSquare,
     },
   ];
 

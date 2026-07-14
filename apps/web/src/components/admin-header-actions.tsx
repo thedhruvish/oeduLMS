@@ -3,7 +3,6 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   Search,
   Bell,
-  Settings,
   LogOut,
   BookOpen,
   Users,
@@ -13,15 +12,8 @@ import {
 import { toast } from "sonner";
 import { UploadsHeaderIndicator } from "@/components/ui/uploads-header-indicator";
 
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@oedulms/ui/components/dropdown-menu";
-import { Avatar, AvatarFallback } from "@oedulms/ui/components/avatar";
 import { Popover, PopoverTrigger, PopoverContent } from "@oedulms/ui/components/popover";
+import { UserProfileDropdown } from "@/components/profile-dropdown";
 import { Button } from "@oedulms/ui/components/button";
 import { ScrollArea } from "@oedulms/ui/components/scroll-area";
 import {
@@ -33,12 +25,10 @@ import {
   CommandItem,
   CommandSeparator,
 } from "@oedulms/ui/components/command";
-import { useAuthStore } from "@/store/auth/auth-store";
 import { useLogout } from "@/api/auth";
 
 export function AdminHeaderActions() {
   const navigate = useNavigate();
-  const user = useAuthStore((state) => state.user);
   const logoutMutation = useLogout();
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
 
@@ -90,15 +80,6 @@ export function AdminHeaderActions() {
       time: "1 day ago",
     },
   ];
-
-  const userInitials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "T";
 
   return (
     <div className="flex items-center gap-4">
@@ -154,33 +135,7 @@ export function AdminHeaderActions() {
       </Popover>
 
       {/* User Profile Avatar Dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={<Button variant="ghost" className="size-8 rounded-full p-0" />}
-        >
-          <Avatar className="size-8">
-            <AvatarFallback className="bg-primary/10 text-primary font-bold">
-              {userInitials}
-            </AvatarFallback>
-          </Avatar>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <div className="flex flex-col gap-1 p-3 text-xs select-none">
-            <span className="text-sm font-semibold truncate text-foreground">{user?.name}</span>
-            <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
-          </div>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => navigate({ to: "/admin" })}>
-            <Settings className="size-4 mr-2" />
-            <span>Organization Settings</span>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-            <LogOut className="size-4 mr-2" />
-            <span>Log out</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <UserProfileDropdown />
 
       {/* Command Palette Dialog */}
       <CommandDialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>

@@ -1,6 +1,7 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { Button } from "@oedulms/ui/components/button";
+import { createFileRoute, redirect, Outlet, Link } from "@tanstack/react-router";
 import { authQueryOptions } from "@/api/auth";
+import { Navbar } from "@/components/navbar";
+import { LayoutDashboard, BookOpen, MessageSquare } from "lucide-react";
 
 export const Route = createFileRoute("/dash")({
   beforeLoad: async ({ context }) => {
@@ -8,44 +9,52 @@ export const Route = createFileRoute("/dash")({
     if (!auth.user) {
       throw redirect({ to: "/auth/login" });
     }
-    if (auth.role === "TEACHER") {
-      throw redirect({ to: "/admin" });
-    }
   },
-  component: DashComponent,
+  component: DashLayoutComponent,
 });
 
-function DashComponent() {
-  const navigate = useNavigate();
-  const context = Route.useRouteContext();
-  const user = context.auth?.user;
-  const logout = context.auth?.logout;
-
+function DashLayoutComponent() {
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-12 flex flex-col gap-6">
-      <div className="flex justify-between items-center w-full">
-        <h1 className="text-3xl font-bold">Student Dashboard</h1>
-        <Button
-          variant="outline"
-          onClick={async () => {
-            if (logout) {
-              await logout();
-              navigate({ to: "/auth/login" });
-            }
-          }}
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-16 md:pb-0">
+      {/* Reusable rounded floating navbar */}
+      <Navbar />
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 pt-20 pb-4 flex flex-col gap-8">
+        <Outlet />
+      </main>
+
+      {/* Mobile Navigation Footer */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur-md flex justify-around py-3 z-45 border-border shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+        <Link
+          to="/dash"
+          activeProps={{ className: "text-primary" }}
+          inactiveProps={{ className: "text-muted-foreground" }}
+          className="flex flex-col items-center gap-1 text-xs"
+          activeOptions={{ exact: true }}
         >
-          Sign Out
-        </Button>
-      </div>
-      <div className="p-6 bg-card border rounded-lg flex flex-col gap-4">
-        <h2 className="text-xl font-semibold">Welcome back, {user?.name}!</h2>
-        <p className="text-muted-foreground">
-          Email: <span className="font-mono">{user?.email}</span>
-        </p>
-        <p className="text-muted-foreground">
-          Role: <span className="capitalize font-semibold text-primary">{context.auth?.role}</span>
-        </p>
-      </div>
+          <LayoutDashboard className="size-5" />
+          <span>Overview</span>
+        </Link>
+        <Link
+          to="/dash/courses"
+          activeProps={{ className: "text-primary" }}
+          inactiveProps={{ className: "text-muted-foreground" }}
+          className="flex flex-col items-center gap-1 text-xs"
+        >
+          <BookOpen className="size-5" />
+          <span>Courses</span>
+        </Link>
+        <Link
+          to="/dash/feed"
+          activeProps={{ className: "text-primary" }}
+          inactiveProps={{ className: "text-muted-foreground" }}
+          className="flex flex-col items-center gap-1 text-xs"
+        >
+          <MessageSquare className="size-5" />
+          <span>Feed</span>
+        </Link>
+      </nav>
     </div>
   );
 }

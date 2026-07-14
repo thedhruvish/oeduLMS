@@ -78,3 +78,9 @@ export const instructorProfilesRelations = relations(instructorProfiles, ({ one 
     references: [user.id],
   }),
 }));
+
+export const systemSettings = pgTable("system_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
