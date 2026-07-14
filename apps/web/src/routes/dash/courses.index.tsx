@@ -8,7 +8,7 @@ import { Button } from "@oedulms/ui/components/button";
 import { BookOpen, Sparkles, GraduationCap } from "lucide-react";
 import { Skeleton } from "@oedulms/ui/components/skeleton";
 
-export const Route = createFileRoute("/dash/courses")({
+export const Route = createFileRoute("/dash/courses/")({
   component: CoursesComponent,
 });
 
@@ -107,11 +107,19 @@ function CoursesComponent() {
                           </div>
                         </div>
 
-                        <Link to={"/courses/$slug"} params={{ slug: enrollment.course.slug }}>
-                          <Button size="sm" className="h-8 text-xs font-semibold px-4">
-                            {enrollment.progress === 0 ? "Start" : "Resume"}
-                          </Button>
-                        </Link>
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs font-semibold px-4"
+                          render={
+                            <Link
+                              to="/dash/courses/$courseId"
+                              params={{ courseId: enrollment.course.id }}
+                            />
+                          }
+                          nativeButton={false}
+                        >
+                          {enrollment.progress === 0 ? "Start" : "Resume"}
+                        </Button>
                       </div>
                     </div>
                   </CardContent>

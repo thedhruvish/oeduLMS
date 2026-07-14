@@ -5,3 +5,4 @@ export * from "./enrollments";
 export * from "./public";
 export * from "./posts";
 export * from "./profile";
+export * from "./discussions";

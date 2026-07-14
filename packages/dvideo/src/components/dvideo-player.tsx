@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { Controls, useCaptionsOptions } from "@videojs/react";
 import { Video } from "@videojs/react/video";
 import { HlsJsVideo } from "@videojs/react/media/hlsjs-video";
@@ -29,6 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@oedulms/ui/components/dialog";
+import { cn } from "@oedulms/ui/lib/utils";
 
 interface Props {
   src: string;
@@ -37,21 +38,18 @@ interface Props {
   onNext?: () => void;
   onPrev?: () => void;
   isEnableCinemaMode?: boolean;
+  className?: string;
 }
 
-function DvideoPlayerInner({ src, poster, onNext, onPrev, isEnableCinemaMode = false }: Props) {
+function DvideoPlayerInner({
+  src,
+  poster,
+  onNext,
+  onPrev,
+  isEnableCinemaMode = false,
+  className,
+}: Props) {
   const store = Player.usePlayer();
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [isHolding2x, setIsHolding2x] = useState(false);
-  const [speedHUD, setSpeedHUD] = useState<{ speed: number; key: number } | null>(null);
-  const [isCinemaMode, setIsCinemaMode] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: "play" | "pause"; key: number } | null>(null);
-  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
-  const [isBuffering, setIsBuffering] = useState(false);
-
-  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const originalSpeedRef = useRef(1);
-  const is2xActiveRef = useRef(false);
 
   const state = Player.usePlayer((s) => ({
     paused: s.paused,
@@ -65,6 +63,53 @@ function DvideoPlayerInner({ src, poster, onNext, onPrev, isEnableCinemaMode = f
 
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [isHolding2x, setIsHolding2x] = useState(false);
+  const [speedHUD, setSpeedHUD] = useState<{ speed: number; key: number } | null>(null);
+  const [isCinemaMode, setIsCinemaMode] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "play" | "pause"; key: number } | null>(null);
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetControlsTimeout = () => {
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    if (!state.paused) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000);
+    }
+  };
+
+  useEffect(() => {
+    if (state.paused) {
+      setShowControls(true);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    } else {
+      resetControlsTimeout();
+    }
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    };
+  }, [state.paused]);
+
+  const handleMouseMove = () => {
+    setShowControls(true);
+    resetControlsTimeout();
+  };
+
+  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const originalSpeedRef = useRef(1);
+  const is2xActiveRef = useRef(false);
 
   const captions = useCaptionsOptions();
   const hasSubtitles = captions && captions.options && captions.options.length > 1;
@@ -91,8 +136,18 @@ function DvideoPlayerInner({ src, poster, onNext, onPrev, isEnableCinemaMode = f
 
   // Combined click-hold and keyboard shortcuts
   useEffect(() => {
+    const isTyping = (target: EventTarget | null): boolean => {
+      if (!target) return false;
+      const element = target as HTMLElement;
+      return (
+        ["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName) ||
+        element.isContentEditable ||
+        element.closest("[contenteditable='true']") !== null
+      );
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement).tagName)) {
+      if (isTyping(e.target)) {
         return;
       }
 
@@ -194,6 +249,10 @@ function DvideoPlayerInner({ src, poster, onNext, onPrev, isEnableCinemaMode = f
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (isTyping(e.target)) {
+        return;
+      }
+
       if (e.key === " ") {
         e.preventDefault();
         if (holdTimeoutRef.current) {
@@ -237,11 +296,12 @@ function DvideoPlayerInner({ src, poster, onNext, onPrev, isEnableCinemaMode = f
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
-    // Prevent triggering if clicked on controls
+    // Prevent triggering if clicked on controls or timeline
     if (
       (e.target as HTMLElement).closest("button") ||
       (e.target as HTMLElement).closest("input") ||
-      (e.target as HTMLElement).closest("[role='dialog']")
+      (e.target as HTMLElement).closest("[role='dialog']") ||
+      (e.target as HTMLElement).closest(".pointer-events-auto")
     ) {
       if (holdTimeoutRef.current) {
         clearTimeout(holdTimeoutRef.current);
@@ -260,12 +320,19 @@ function DvideoPlayerInner({ src, poster, onNext, onPrev, isEnableCinemaMode = f
       is2xActiveRef.current = false;
       setIsHolding2x(false);
     } else {
-      if (state.paused) {
-        store.play();
-        setFeedback({ type: "play", key: Date.now() });
+      // If controls are hidden, first tap/click just shows them
+      if (!showControls) {
+        setShowControls(true);
+        resetControlsTimeout();
       } else {
-        store.pause();
-        setFeedback({ type: "pause", key: Date.now() });
+        if (state.paused) {
+          store.play();
+          setFeedback({ type: "play", key: Date.now() });
+        } else {
+          store.pause();
+          setFeedback({ type: "pause", key: Date.now() });
+        }
+        resetControlsTimeout();
       }
     }
   };
@@ -280,18 +347,29 @@ function DvideoPlayerInner({ src, poster, onNext, onPrev, isEnableCinemaMode = f
       is2xActiveRef.current = false;
       setIsHolding2x(false);
     }
+    // Hide controls when mouse leaves container (unless paused)
+    if (!state.paused) {
+      setShowControls(false);
+    }
   };
 
-  const containerClasses = `relative group w-full aspect-video rounded-2xl overflow-hidden bg-zinc-950 shadow-2xl select-none transition-all duration-300 ${
-    isCinemaMode
-      ? "w-screen max-w-none md:left-1/2 md:-translate-x-1/2 md:relative z-40 rounded-none aspect-[21/9]"
-      : ""
-  }`;
+  const containerClasses = cn(
+    "relative group w-full aspect-video rounded-2xl overflow-hidden bg-zinc-950 shadow-2xl select-none transition-all duration-300",
+    isCinemaMode &&
+      "w-screen max-w-none md:left-1/2 md:-translate-x-1/2 md:relative z-40 rounded-none aspect-[21/9]",
+    className
+  );
 
   const isHls = src.endsWith(".m3u8") || src.includes(".m3u8");
 
   return (
-    <Player.Container ref={setContainerEl} className={containerClasses}>
+    <Player.Container
+      ref={setContainerEl}
+      className={containerClasses}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Click-to-play surface & Hold-to-speedup (z-10) */}
       <div
         onMouseDown={handleMouseDown}
@@ -304,7 +382,7 @@ function DvideoPlayerInner({ src, poster, onNext, onPrev, isEnableCinemaMode = f
         <HlsJsVideo
           src={src}
           poster={poster}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           playsInline
           onWaiting={() => setIsBuffering(true)}
           onPlaying={() => setIsBuffering(false)}
@@ -316,7 +394,7 @@ function DvideoPlayerInner({ src, poster, onNext, onPrev, isEnableCinemaMode = f
         <Video
           src={src}
           poster={poster}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           playsInline
           onWaiting={() => setIsBuffering(true)}
           onPlaying={() => setIsBuffering(false)}
@@ -370,7 +448,12 @@ function DvideoPlayerInner({ src, poster, onNext, onPrev, isEnableCinemaMode = f
       )}
 
       {/* Custom Controls Overlay */}
-      <Controls.Root className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/90 via-black/20 to-black/50 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 pointer-events-none">
+      <Controls.Root
+        className={cn(
+          "absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/90 via-black/20 to-black/50 p-4 transition-opacity duration-300 z-30 pointer-events-none",
+          showControls ? "opacity-100" : "opacity-0"
+        )}
+      >
         {/* Top Row: Keyboard Shortcut Info Button */}
         <div className="flex justify-end w-full pointer-events-auto">
           <Dialog open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
@@ -532,10 +615,10 @@ function DvideoPlayerInner({ src, poster, onNext, onPrev, isEnableCinemaMode = f
   );
 }
 
-export function DvideoPlayer(props: Props) {
+export const DvideoPlayer = memo(function DvideoPlayer(props: Props) {
   return (
     <Player.Provider>
       <DvideoPlayerInner {...props} />
     </Player.Provider>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, Outlet, Link } from "@tanstack/react-router";
+import { createFileRoute, redirect, Outlet, Link, useMatchRoute } from "@tanstack/react-router";
 import { authQueryOptions } from "@/api/auth";
 import { Navbar } from "@/components/navbar";
 import { LayoutDashboard, BookOpen, MessageSquare } from "lucide-react";
@@ -14,6 +14,18 @@ export const Route = createFileRoute("/dash")({
 });
 
 function DashLayoutComponent() {
+  const matchRoute = useMatchRoute();
+  const isCoursePlayer = matchRoute({ to: "/dash/courses/$courseId", fuzzy: false });
+
+  // Full-bleed player page: no dashboard header / mobile nav chrome
+  if (isCoursePlayer) {
+    return (
+      <div className="min-h-dvh bg-background text-foreground font-sans">
+        <Outlet />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-16 md:pb-0">
       {/* Reusable rounded floating navbar */}

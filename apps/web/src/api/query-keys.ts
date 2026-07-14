@@ -29,3 +29,12 @@ export const enrollmentsKeys = {
   all: ["enrollments"] as const,
   lists: () => [...enrollmentsKeys.all, "list"] as const,
 };
+
+export const coursePlayerKeys = {
+  all: ["course-player"] as const,
+  course: (courseId: string) => [...coursePlayerKeys.all, "course", courseId] as const,
+  comments: (courseId: string, lectureId: string) =>
+    [...coursePlayerKeys.all, "comments", courseId, lectureId] as const,
+  questions: (courseId: string, lectureId: string) =>
+    [...coursePlayerKeys.all, "questions", courseId, lectureId] as const,
+};
