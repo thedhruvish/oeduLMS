@@ -7,6 +7,7 @@ import { adminCurriculumRouter } from "../admin/curriculum";
 import { adminStudentsRouter } from "../admin/students";
 import { adminCouponsRouter } from "../admin/coupons";
 import { enrollmentsRouter } from "../admin/enrollments";
+import { adminSettingsRouter } from "../admin/settings";
 
 export const adminRouter = new Hono<AppVariables>();
 
@@ -20,3 +21,4 @@ adminRouter.route("/media", adminMediaRouter);
 adminRouter.route("/students", adminStudentsRouter);
 adminRouter.route("/coupons", adminCouponsRouter);
 adminRouter.route("/enrollments", enrollmentsRouter);
+adminRouter.route("/settings", adminSettingsRouter);
