@@ -9,6 +9,8 @@ import { cn } from "@oedulms/ui/lib/utils";
 import {
   useCoursePlayer,
   useUpdateLectureProgress,
+  useUserSettings,
+  useUpdateUserSettings,
   type PlayerLecture,
   type PlayerSection,
 } from "@/api/course-player";
@@ -57,6 +59,8 @@ export function CoursePlayerPage({ courseId, lectureId }: CoursePlayerPageProps)
   const navigate = useNavigate();
   const { data, isLoading, isError, error, refetch } = useCoursePlayer(courseId);
   const updateProgress = useUpdateLectureProgress(courseId);
+  const { data: userSettings, isLoading: isLoadingSettings } = useUserSettings();
+  const updateSettings = useUpdateUserSettings();
 
   const isDesktop = useIsDesktop();
 
@@ -68,15 +72,54 @@ export function CoursePlayerPage({ courseId, lectureId }: CoursePlayerPageProps)
 
   const allLectures = React.useMemo(() => (data ? flattenLectures(data.sections) : []), [data]);
 
-  // Resolve active lecture: query param → first incomplete → first lecture
+  // Resolve active lecture: query param → settings.lastWatchedLectures[courseId] → last watched (latest progress.updatedAt) → first incomplete → first lecture
   const activeLecture = React.useMemo(() => {
     if (!data) return undefined;
     const fromParam = findLecture(data.sections, lectureId);
     if (fromParam) return fromParam;
 
+    // Try finding by last watched lecture from settings cache
+    if (userSettings?.lastWatchedLectures?.[courseId]) {
+      const settingsLecture = findLecture(
+        data.sections,
+        userSettings.lastWatchedLectures[courseId]
+      );
+      if (settingsLecture) return settingsLecture;
+    }
+
+    // Find the lecture with the most recent progress updates
+    const sortedProgressLectures = [...allLectures]
+      .filter((l) => l.progress.updatedAt)
+      .sort((a, b) => {
+        const timeA = new Date(a.progress.updatedAt!).getTime();
+        const timeB = new Date(b.progress.updatedAt!).getTime();
+        return timeB - timeA; // Descending (most recent first)
+      });
+    if (sortedProgressLectures.length > 0) return sortedProgressLectures[0];
+
     const firstIncomplete = allLectures.find((l) => !l.progress.completed);
     return firstIncomplete ?? allLectures[0];
-  }, [data, lectureId, allLectures]);
+  }, [data, lectureId, allLectures, userSettings, courseId]);
+
+  // Save last watched lecture to user settings in DB
+  const lastSavedLectureRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!activeLecture || !userSettings) return;
+    if (lastSavedLectureRef.current === activeLecture.id) return;
+
+    if (userSettings.lastWatchedLectures?.[courseId] === activeLecture.id) {
+      lastSavedLectureRef.current = activeLecture.id;
+      return;
+    }
+
+    lastSavedLectureRef.current = activeLecture.id;
+    updateSettings.mutate({
+      lastWatchedLectures: {
+        ...(userSettings.lastWatchedLectures || {}),
+        [courseId]: activeLecture.id,
+      },
+    });
+  }, [activeLecture, userSettings, courseId, updateSettings]);
 
   // Sync URL when lecture missing or invalid
   React.useEffect(() => {
@@ -100,9 +143,27 @@ export function CoursePlayerPage({ courseId, lectureId }: CoursePlayerPageProps)
         lectureId: lecture.id,
         completed: true,
         watchSeconds: Math.max(lecture.progress.watchSeconds, lecture.duration || 1),
+        lastPosition: lecture.duration || 0,
       });
     },
     [updateProgress]
+  );
+
+  const handleProgressUpdate = React.useCallback(
+    (currentTime: number, duration: number) => {
+      if (!activeLecture) return;
+
+      const isNearEnd = duration > 0 && duration - currentTime < 5;
+      const completed = activeLecture.progress.completed || isNearEnd;
+
+      updateProgress.mutate({
+        lectureId: activeLecture.id,
+        lastPosition: Math.round(currentTime),
+        watchSeconds: Math.round(Math.max(activeLecture.progress.watchSeconds, currentTime)),
+        completed,
+      });
+    },
+    [activeLecture, updateProgress]
   );
 
   const selectLecture = React.useCallback(
@@ -253,6 +314,18 @@ export function CoursePlayerPage({ courseId, lectureId }: CoursePlayerPageProps)
                   activeIndex >= 0 && activeIndex < allLectures.length - 1 ? goNext : undefined
                 }
                 onPrev={activeIndex > 0 ? goPrev : undefined}
+                initialTime={activeLecture?.progress?.lastPosition || 0}
+                onProgressUpdate={handleProgressUpdate}
+                initialPlaybackRate={
+                  userSettings
+                    ? parseFloat(userSettings.playbackSpeed)
+                    : isLoadingSettings
+                      ? undefined
+                      : 1.0
+                }
+                onPlaybackRateChange={(rate) =>
+                  updateSettings.mutate({ playbackSpeed: String(rate) })
+                }
               />
             </div>
 

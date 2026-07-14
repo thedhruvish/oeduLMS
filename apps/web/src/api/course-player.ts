@@ -17,6 +17,7 @@ export interface LectureProgress {
   watchSeconds: number;
   lastPosition: number;
   completed: boolean;
+  updatedAt?: string;
 }
 
 export interface PlayerLecture {
@@ -148,8 +149,45 @@ export function useUpdateLectureProgress(courseId: string) {
         courseProgress: number;
       };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: coursePlayerKeys.course(courseId) });
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData<CoursePlayerData>(coursePlayerKeys.course(courseId), (old) => {
+        if (!old) return old;
+        const newSections = old.sections.map((section) => ({
+          ...section,
+          lectures: section.lectures.map((lecture) => {
+            if (lecture.id === variables.lectureId) {
+              return {
+                ...lecture,
+                progress: {
+                  ...lecture.progress,
+                  watchSeconds: data.progress.watchSeconds,
+                  lastPosition: data.progress.lastPosition,
+                  completed: data.progress.completed,
+                },
+              };
+            }
+            return lecture;
+          }),
+        }));
+
+        const totalPublishedLectures = newSections.flatMap((s) => s.lectures).length;
+        const completedLectures = newSections
+          .flatMap((s) => s.lectures)
+          .filter((l) => l.progress.completed).length;
+
+        return {
+          ...old,
+          enrollment: {
+            ...old.enrollment,
+            progress: data.courseProgress,
+          },
+          sections: newSections,
+          stats: {
+            totalLectures: totalPublishedLectures,
+            completedLectures,
+          },
+        };
+      });
     },
   });
 }
@@ -330,6 +368,51 @@ export function useAddLectureAnswer(courseId: string, lectureId: string) {
       queryClient.invalidateQueries({
         queryKey: coursePlayerKeys.questions(courseId, lectureId),
       });
+    },
+  });
+}
+
+// ─── User Settings ───────────────────────────────────────────────────────────
+
+export interface UserSettings {
+  userId: string;
+  playbackSpeed: string;
+  lastWatchedLectures: Record<string, string>;
+  updatedAt: string;
+}
+
+export const userSettingsKeys = {
+  all: ["user-settings"] as const,
+};
+
+export function useUserSettings() {
+  return useQuery({
+    queryKey: userSettingsKeys.all,
+    queryFn: async () => {
+      const { data } = await axiosClient.get("/dash/profile/settings/user");
+      return data as UserSettings;
+    },
+  });
+}
+
+export function useUpdateUserSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      playbackSpeed,
+      lastWatchedLectures,
+    }: {
+      playbackSpeed?: string;
+      lastWatchedLectures?: Record<string, string>;
+    }) => {
+      const { data } = await axiosClient.put("/dash/profile/settings/user", {
+        playbackSpeed,
+        lastWatchedLectures,
+      });
+      return data as UserSettings;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData<UserSettings>(userSettingsKeys.all, data);
     },
   });
 }

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { createDb } from "@oedulms/db";
 import { courses } from "@oedulms/db/schema/courses";
 import { courseEnrollments } from "@oedulms/db/schema/enrollments";
-import { eq, and, desc } from "@oedulms/db/dzl";
+import { eq, and, desc, inArray } from "@oedulms/db/dzl";
 import type { AppVariables } from "../types";
 
 export const dashEnrollmentsRouter = new Hono<AppVariables>();
@@ -29,7 +29,12 @@ dashEnrollmentsRouter.get("/", async (c) => {
       })
       .from(courseEnrollments)
       .innerJoin(courses, eq(courseEnrollments.courseId, courses.id))
-      .where(and(eq(courseEnrollments.studentId, user.id), eq(courseEnrollments.status, "active")))
+      .where(
+        and(
+          eq(courseEnrollments.studentId, user.id),
+          inArray(courseEnrollments.status, ["active", "completed"])
+        )
+      )
       .orderBy(desc(courseEnrollments.createdAt));
 
     return c.json(list);
@@ -62,7 +67,7 @@ dashEnrollmentsRouter.get("/:courseId/check", async (c) => {
       where: and(
         eq(courseEnrollments.courseId, courseRecord.id),
         eq(courseEnrollments.studentId, user.id),
-        eq(courseEnrollments.status, "active")
+        inArray(courseEnrollments.status, ["active", "completed"])
       ),
     });
 

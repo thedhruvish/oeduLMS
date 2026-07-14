@@ -39,7 +39,7 @@ async function requireEnrollment(
     where: and(
       eq(courseEnrollments.courseId, courseId),
       eq(courseEnrollments.studentId, studentId),
-      eq(courseEnrollments.status, "active")
+      inArray(courseEnrollments.status, ["active", "completed"])
     ),
   });
 
@@ -122,7 +122,7 @@ dashCoursesRouter.get("/:courseId", async (c) => {
 
     let progressMap = new Map<
       string,
-      { watchSeconds: number; lastPosition: number; completed: boolean }
+      { watchSeconds: number; lastPosition: number; completed: boolean; updatedAt: Date }
     >();
 
     if (allLectureIds.length > 0) {
@@ -143,6 +143,7 @@ dashCoursesRouter.get("/:courseId", async (c) => {
             watchSeconds: p.watchSeconds,
             lastPosition: p.lastPosition,
             completed: p.completed,
+            updatedAt: p.updatedAt,
           },
         ])
       );
@@ -173,6 +174,7 @@ dashCoursesRouter.get("/:courseId", async (c) => {
             watchSeconds: progress?.watchSeconds ?? 0,
             lastPosition: progress?.lastPosition ?? 0,
             completed: progress?.completed ?? false,
+            updatedAt: progress?.updatedAt ? progress.updatedAt.toISOString() : undefined,
           },
         };
       });

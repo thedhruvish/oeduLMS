@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { createDb } from "@oedulms/db";
 import { studentProfiles } from "@oedulms/db/schema/profiles";
-import { user } from "@oedulms/db/schema/auth";
+import { user, userSettings } from "@oedulms/db/schema/auth";
 import { eq } from "@oedulms/db/dzl";
 import type { AppVariables } from "../types";
 import { zValidator } from "@hono/zod-validator";
@@ -104,6 +104,83 @@ dashProfileRouter.put("/", zValidator("json", profileUpdateScheme), async (c) =>
     return c.json({ success: true });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Failed to update profile";
+    return c.json({ error: msg }, 500);
+  }
+});
+
+dashProfileRouter.get("/settings/user", async (c) => {
+  try {
+    const sessionUser = c.get("sessionUser");
+    const db = createDb();
+
+    let settings = await db.query.userSettings.findFirst({
+      where: eq(userSettings.userId, sessionUser.id),
+    });
+
+    if (!settings) {
+      const [newSettings] = await db
+        .insert(userSettings)
+        .values({
+          userId: sessionUser.id,
+          playbackSpeed: "1.0",
+          lastWatchedLectures: {},
+        })
+        .returning();
+      settings = newSettings;
+    }
+
+    return c.json(settings);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Failed to fetch settings";
+    return c.json({ error: msg }, 500);
+  }
+});
+
+dashProfileRouter.put("/settings/user", async (c) => {
+  try {
+    const sessionUser = c.get("sessionUser");
+    const body = await c.req.json();
+    const db = createDb();
+
+    const speed = body.playbackSpeed;
+    const lastWatched = body.lastWatchedLectures;
+
+    if (speed !== undefined && typeof speed !== "string") {
+      return c.json({ error: "Invalid playbackSpeed" }, 400);
+    }
+    if (lastWatched !== undefined && (typeof lastWatched !== "object" || lastWatched === null)) {
+      return c.json({ error: "Invalid lastWatchedLectures" }, 400);
+    }
+
+    const existing = await db.query.userSettings.findFirst({
+      where: eq(userSettings.userId, sessionUser.id),
+    });
+
+    let result;
+    if (existing) {
+      [result] = await db
+        .update(userSettings)
+        .set({
+          ...(speed !== undefined ? { playbackSpeed: speed } : {}),
+          ...(lastWatched !== undefined ? { lastWatchedLectures: lastWatched } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(userSettings.userId, sessionUser.id))
+        .returning();
+    } else {
+      [result] = await db
+        .insert(userSettings)
+        .values({
+          userId: sessionUser.id,
+          playbackSpeed: speed ?? "1.0",
+          lastWatchedLectures: lastWatched ?? {},
+        })
+        .returning();
+    }
+
+    return c.json(result);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Failed to update settings";
     return c.json({ error: msg }, 500);
   }
 });

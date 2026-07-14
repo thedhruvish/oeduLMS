@@ -39,6 +39,10 @@ interface Props {
   onPrev?: () => void;
   isEnableCinemaMode?: boolean;
   className?: string;
+  initialTime?: number;
+  onProgressUpdate?: (currentTime: number, duration: number) => void;
+  initialPlaybackRate?: number;
+  onPlaybackRateChange?: (rate: number) => void;
 }
 
 function DvideoPlayerInner({
@@ -48,6 +52,10 @@ function DvideoPlayerInner({
   onPrev,
   isEnableCinemaMode = false,
   className,
+  initialTime,
+  onProgressUpdate,
+  initialPlaybackRate,
+  onPlaybackRateChange,
 }: Props) {
   const store = Player.usePlayer();
 
@@ -63,6 +71,8 @@ function DvideoPlayerInner({
 
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  const currentPlaybackRate = Player.usePlayer((s) => s.playbackRate);
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [isHolding2x, setIsHolding2x] = useState(false);
@@ -101,6 +111,64 @@ function DvideoPlayerInner({
       }
     };
   }, [state.paused]);
+
+  const lastReportedRateRef = useRef<number | null>(null);
+  const isInitialRateAppliedRef = useRef(false);
+  const isInitialRateMatchedRef = useRef(false);
+  const lastPlaybackRateSrcRef = useRef<string | null>(null);
+
+  // Reset when source changes
+  useEffect(() => {
+    isInitialRateAppliedRef.current = false;
+    isInitialRateMatchedRef.current = false;
+    lastPlaybackRateSrcRef.current = null;
+  }, [src]);
+
+  // Handle setting initial playback rate on store target load
+  useEffect(() => {
+    if (!store.target || !src || initialPlaybackRate === undefined) return;
+    if (lastPlaybackRateSrcRef.current === src) return;
+
+    store.setPlaybackRate(initialPlaybackRate);
+    lastPlaybackRateSrcRef.current = src;
+    isInitialRateAppliedRef.current = true;
+    lastReportedRateRef.current = initialPlaybackRate;
+  }, [src, store.target, initialPlaybackRate, store]);
+
+  // Handle reporting playback rate changes back to the parent
+  const onPlaybackRateChangeRef = useRef(onPlaybackRateChange);
+  onPlaybackRateChangeRef.current = onPlaybackRateChange;
+
+  useEffect(() => {
+    if (!store.target || !src || currentPlaybackRate === undefined) return;
+
+    // Skip/wait if initialPlaybackRate has not loaded/been supplied yet
+    if (initialPlaybackRate === undefined) {
+      return;
+    }
+
+    // Wait until the initial rate is applied
+    if (!isInitialRateAppliedRef.current) {
+      return;
+    }
+
+    // Check if the player has caught up to the initial rate
+    if (!isInitialRateMatchedRef.current) {
+      if (currentPlaybackRate === initialPlaybackRate) {
+        isInitialRateMatchedRef.current = true;
+      }
+      return;
+    }
+
+    // Skip if it matches the initial/last reported rate
+    if (lastReportedRateRef.current === currentPlaybackRate) return;
+
+    lastReportedRateRef.current = currentPlaybackRate;
+    if (onPlaybackRateChangeRef.current) {
+      console.log("[DvideoPlayer] Reporting playback rate change:", currentPlaybackRate);
+      onPlaybackRateChangeRef.current(currentPlaybackRate);
+    }
+  }, [src, currentPlaybackRate, store.target, initialPlaybackRate]);
 
   const handleMouseMove = () => {
     setShowControls(true);
@@ -147,6 +215,9 @@ function DvideoPlayerInner({
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!store.target) {
+        return;
+      }
       if (isTyping(e.target)) {
         return;
       }
@@ -249,6 +320,9 @@ function DvideoPlayerInner({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (!store.target) {
+        return;
+      }
       if (isTyping(e.target)) {
         return;
       }
@@ -610,7 +684,11 @@ function DvideoPlayerInner({
         </div>
       </Controls.Root>
 
-      <ResumePlaybackTracker src={src} />
+      <ResumePlaybackTracker
+        src={src}
+        initialTime={initialTime}
+        onProgressUpdate={onProgressUpdate}
+      />
     </Player.Container>
   );
 }

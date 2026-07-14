@@ -7,6 +7,10 @@ interface LectureVideoAreaProps {
   isTvMode: boolean;
   onNext?: () => void;
   onPrev?: () => void;
+  initialTime?: number;
+  onProgressUpdate?: (currentTime: number, duration: number) => void;
+  initialPlaybackRate?: number;
+  onPlaybackRateChange?: (rate: number) => void;
 }
 
 /**
@@ -15,7 +19,16 @@ interface LectureVideoAreaProps {
  * We use a single stable JSX tree so that toggling sidebar/TV mode or
  * resizing the screen does NOT unmount/reset the player.
  */
-export function LectureVideoArea({ videoUrl, poster, onNext, onPrev }: LectureVideoAreaProps) {
+export function LectureVideoArea({
+  videoUrl,
+  poster,
+  onNext,
+  onPrev,
+  initialTime,
+  onProgressUpdate,
+  initialPlaybackRate,
+  onPlaybackRateChange,
+}: LectureVideoAreaProps) {
   if (!videoUrl) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-zinc-950 text-white">
@@ -36,6 +49,10 @@ export function LectureVideoArea({ videoUrl, poster, onNext, onPrev }: LectureVi
         isEnableCinemaMode={false}
         onNext={onNext}
         onPrev={onPrev}
+        initialTime={initialTime}
+        onProgressUpdate={onProgressUpdate}
+        initialPlaybackRate={initialPlaybackRate}
+        onPlaybackRateChange={onPlaybackRateChange}
         className="h-full w-full rounded-none aspect-auto"
       />
     </div>

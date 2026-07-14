@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Player } from "../player";
 import { RotateCcw } from "lucide-react";
 
 interface Props {
   src: string;
+  initialTime?: number;
+  onProgressUpdate?: (currentTime: number, duration: number) => void;
 }
 
-export function ResumePlaybackTracker({ src }: Props) {
+export function ResumePlaybackTracker({ src, initialTime, onProgressUpdate }: Props) {
   const store = Player.usePlayer();
   const [showToast, setShowToast] = useState(false);
   const [resumedTime, setResumedTime] = useState(0);
@@ -14,43 +16,88 @@ export function ResumePlaybackTracker({ src }: Props) {
   const state = Player.usePlayer((s) => ({
     currentTime: s.currentTime,
     duration: s.duration,
+    paused: s.paused,
   }));
+
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  const lastResumedSrcRef = useRef<string | null>(null);
+  const onProgressUpdateRef = useRef(onProgressUpdate);
+  onProgressUpdateRef.current = onProgressUpdate;
 
   // Handle saving time periodically
   useEffect(() => {
-    if (!src || state.currentTime === 0 || state.duration === 0) return;
+    if (!src || !store.target || state.paused || !onProgressUpdateRef.current) return;
 
-    // Don't save if near the end of video
-    if (state.duration - state.currentTime < 5) {
-      localStorage.removeItem(`dvideo-progress:${src}`);
-      return;
-    }
-    const timer = setTimeout(() => {
-      localStorage.setItem(`dvideo-progress:${src}`, String(state.currentTime));
-    }, 1500);
+    const interval = setInterval(() => {
+      const current = stateRef.current.currentTime;
+      const dur = stateRef.current.duration;
 
-    return () => clearTimeout(timer);
-  }, [src, state.currentTime, state.duration]);
+      if (current === 0 || dur === 0) return;
+
+      if (onProgressUpdateRef.current) {
+        onProgressUpdateRef.current(current, dur);
+      }
+    }, 5000); // 5 seconds polling intervalw
+    return () => clearInterval(interval);
+  }, [src, state.paused, store.target]);
 
   // Handle loading / resuming time on source load
   useEffect(() => {
     if (!src) return;
-    const savedTimeRaw = localStorage.getItem(`dvideo-progress:${src}`);
-    if (savedTimeRaw) {
-      const savedTime = parseFloat(savedTimeRaw);
+
+    let active = true;
+    let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const checkAndResume = () => {
+      if (!active) return;
+      if (!store.target) {
+        // Retry next frame once target is mounted
+        requestAnimationFrame(checkAndResume);
+        return;
+      }
+
+      if (lastResumedSrcRef.current === src) return;
+      lastResumedSrcRef.current = src;
+
+      const savedTime = initialTime || 0;
+
       if (savedTime > 2) {
         store.seek(savedTime);
         setResumedTime(savedTime);
         setShowToast(true);
-        const timer = setTimeout(() => setShowToast(false), 5000);
-        return () => clearTimeout(timer);
+
+        // Auto play video
+        store.play();
+
+        toastTimer = setTimeout(() => {
+          if (active) {
+            setShowToast(false);
+          }
+        }, 5000);
+      } else {
+        // Auto play video even starting from the beginning
+        store.play();
       }
-    }
-  }, [src, store]);
+    };
+
+    checkAndResume();
+
+    return () => {
+      active = false;
+      if (toastTimer) {
+        clearTimeout(toastTimer);
+      }
+    };
+  }, [src, store, initialTime]);
 
   const handleStartOver = () => {
+    if (!store.target) return;
     store.seek(0);
-    localStorage.removeItem(`dvideo-progress:${src}`);
+    if (onProgressUpdate) {
+      onProgressUpdate(0, stateRef.current.duration);
+    }
     setShowToast(false);
   };
 
