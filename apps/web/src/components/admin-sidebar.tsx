@@ -46,8 +46,9 @@ export function AdminSidebar() {
   const navItems = [
     {
       title: "Dashboard",
-      to: "/admin",
+      to: "/admin/dash",
       icon: LayoutDashboard,
+      exact: true,
     },
     {
       title: "Courses",
@@ -117,6 +118,7 @@ export function AdminSidebar() {
                   render={
                     <Link
                       to={item.to}
+                      activeOptions={{ exact: item.exact }}
                       activeProps={{
                         className: "bg-primary/10 text-primary font-medium",
                       }}
