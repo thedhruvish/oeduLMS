@@ -98,7 +98,8 @@ function AdminEditCourseComponent() {
         </div>
 
         <Button
-          onClick={() => formRef.current?.requestSubmit()}
+          type="submit"
+          form="course-form"
           disabled={updateCourseMutation.isPending}
           size="sm"
         >

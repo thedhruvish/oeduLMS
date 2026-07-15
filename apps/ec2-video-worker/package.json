@@ -1,0 +1,28 @@
+{
+  "name": "ec2-video-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EC2 spot instance worker for video splitting and HLS encoding",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "package": "npm run build && tar -czf ec2-video-worker.tar.gz dist package.json"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1087.0",
+    "@aws-sdk/client-sqs": "^3.1087.0",
+    "@aws-sdk/client-ec2": "^3.1087.0",
+    "@aws-sdk/lib-storage": "^3.1087.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.27",
+    "@types/node": "^24.0.0",
+    "@types/uuid": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.8.3"
+  }
+}

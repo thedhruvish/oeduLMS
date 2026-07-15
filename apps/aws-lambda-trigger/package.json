@@ -1,0 +1,24 @@
+{
+  "name": "aws-lambda-trigger",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AWS Lambda functions for the video processing pipeline",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:zip": "tsc && cd dist && zip -r ../lambda.zip .",
+    "dev": "tsc -w"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ec2": "^3.1087.0",
+    "@aws-sdk/client-sqs": "^3.1087.0",
+    "@aws-sdk/client-s3": "^3.1087.0",
+    "@aws-sdk/client-eventbridge": "^3.1087.0",
+    "@neondatabase/serverless": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.149",
+    "@types/node": "^24.0.0",
+    "typescript": "~5.8.3"
+  }
+}

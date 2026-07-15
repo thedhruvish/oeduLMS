@@ -197,6 +197,7 @@ export function CourseForm({
 
   return (
     <form
+      id="course-form"
       ref={formRef}
       onSubmit={(e) => {
         e.preventDefault();
