@@ -31,15 +31,15 @@ app.use("*", async (c, next) => {
 });
 
 // CORS
-app.use(
-  "/*",
-  cors({
-    origin: process.env.CORS_ORIGIN,
+app.use("/*", async (c, next) => {
+  const corsMiddleware = cors({
+    origin: c.env.CORS_ORIGIN,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-  })
-);
+  });
+  return corsMiddleware(c, next);
+});
 
 // Public auth routes (Better Auth)
 app.on(["POST", "GET"], "/api/auth/*", (c) => createAuth().handler(c.req.raw));
