@@ -67,6 +67,7 @@ export const courseLectures = pgTable("course_lectures", {
   slug: text("slug").notNull().unique(),
   description: text("description"),
   videoUrl: text("video_url"),
+  hlsUrl: text("hls_url"),
   thumbnail: text("thumbnail"),
   duration: integer("duration").default(0).notNull(), // duration in seconds
   isPreview: boolean("is_preview").default(false).notNull(),

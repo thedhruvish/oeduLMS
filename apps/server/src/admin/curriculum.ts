@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { createDb } from "@oedulms/db";
 import { courseSections, courseLectures, lectureResources } from "@oedulms/db/schema/courses";
@@ -9,6 +9,79 @@ import type { AppVariables } from "../types";
 import { slugify } from "@/utils/slugify";
 
 export const adminCurriculumRouter = new Hono<AppVariables>();
+
+// ── Transcoding Pipeline Trigger Helper ──────────────────────────────────────
+async function triggerTranscoding(
+  c: Context<AppVariables>,
+  lectureId: string,
+  videoUrl: string,
+  qualities: (string | number)[] = [360, 720, 1080],
+  duration?: number
+) {
+  const lambdaTriggerUrl = c.env.LAMBDA_TRIGGER_URL;
+  const lambdaApiKey = c.env.LAMBDA_API_KEY;
+
+  if (!lambdaTriggerUrl || !lambdaApiKey) {
+    console.warn("[curriculum] Pipeline not configured. Skipping trigger.");
+    return;
+  }
+
+  const origin = new URL(c.req.url).origin;
+  const callbackUrl = `${origin}/api/public/video/pipeline-callback`;
+  const numericQualities = (qualities || []).map(Number);
+
+  try {
+    const { createDb } = await import("@oedulms/db");
+    const { videos } = await import("@oedulms/db/schema/videos");
+    const { eq } = await import("@oedulms/db/dzl");
+    const db = createDb();
+
+    // Upsert status row in main DB to SPLITTING
+    const existing = await db.select().from(videos).where(eq(videos.id, lectureId)).limit(1);
+
+    if (existing[0]) {
+      await db
+        .update(videos)
+        .set({
+          processingStatus: "SPLITTING",
+          processingError: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(videos.id, lectureId));
+    } else {
+      await db.insert(videos).values({
+        id: lectureId,
+        processingStatus: "SPLITTING",
+      });
+    }
+
+    // Call Lambda trigger endpoint
+    const resp = await fetch(lambdaTriggerUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": lambdaApiKey,
+      },
+      body: JSON.stringify({
+        videoId: lectureId,
+        sourceS3Url: videoUrl,
+        qualities: numericQualities,
+        durationSeconds: duration,
+        callbackUrl,
+      }),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error(`[curriculum-transcode] Lambda ${resp.status}: ${text}`);
+    } else {
+      console.log(`[curriculum-transcode] Pipeline started for lecture: ${lectureId}`);
+    }
+  } catch (err) {
+    console.error("[curriculum-transcode] Error triggering pipeline:", err);
+  }
+}
+
 
 // 1. GET /:courseId/sections — Fetch all sections and nested lectures
 adminCurriculumRouter.get("/:courseId/sections", async (c) => {
@@ -228,6 +301,18 @@ adminCurriculumRouter.post(
         throw new Error("Failed to create lecture");
       }
 
+      if (newLecture.videoUrl) {
+        c.executionCtx.waitUntil(
+          triggerTranscoding(
+            c,
+            newLecture.id,
+            newLecture.videoUrl,
+            newLecture.qualities,
+            newLecture.duration
+          )
+        );
+      }
+
       // Insert nested resources
       if (body.resources && body.resources.length > 0) {
         for (const res of body.resources) {
@@ -298,6 +383,18 @@ adminCurriculumRouter.put(
     const db = createDb();
 
     try {
+      // Fetch current lecture state to check older videoUrl
+      const existingLecture = await db
+        .select()
+        .from(courseLectures)
+        .where(eq(courseLectures.id, id))
+        .limit(1);
+
+      if (!existingLecture[0]) {
+        return c.json({ error: "Lecture not found" }, 404);
+      }
+      const oldVideoUrl = existingLecture[0].videoUrl;
+
       const { resources, ...updateFieldsData } = updateData;
       const updateFields: Partial<typeof courseLectures.$inferInsert> = {
         title: updateFieldsData.title,
@@ -326,6 +423,19 @@ adminCurriculumRouter.put(
 
       if (!updatedLecture) {
         return c.json({ error: "Lecture not found" }, 404);
+      }
+
+      // If videoUrl was updated to a new, different value, trigger transcoding
+      if (updatedLecture.videoUrl && updatedLecture.videoUrl !== oldVideoUrl) {
+        c.executionCtx.waitUntil(
+          triggerTranscoding(
+            c,
+            id,
+            updatedLecture.videoUrl,
+            updatedLecture.qualities,
+            updatedLecture.duration
+          )
+        );
       }
 
       // Sync resources if provided

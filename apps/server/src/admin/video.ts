@@ -5,12 +5,18 @@ import type { AppVariables } from "../types";
 
 /**
  * Admin video pipeline endpoints.
- * Uses the main @oedulms/db for course/video records.
- * Delegates pipeline state queries to the Lambda /status endpoint.
+ * Handles triggering the transcoding pipeline and querying unified status.
  */
 export const adminVideoRouter = new Hono<AppVariables>();
 
 const ALL_QUALITIES = [144, 240, 360, 480, 540, 720, 900, 1080, 1440, 2160, 4320] as const;
+
+interface LambdaStatusResponse {
+  status: "SPLITTING" | "ENCODING" | "READY" | "ERROR";
+  progress: number;
+  masterUrl: string | null;
+  errorMessage: string | null;
+}
 
 const triggerSchema = z.object({
   videoId: z.string().min(1),
@@ -23,6 +29,7 @@ const triggerSchema = z.object({
 });
 
 // ── POST /admin/video/trigger-pipeline ────────────────────────────────────────
+// Client calls this to trigger AWS Lambda transcoding.
 
 adminVideoRouter.post("/trigger-pipeline", zValidator("json", triggerSchema), async (c) => {
   const { videoId, sourceS3Url, qualities, durationSeconds } = c.req.valid("json");
@@ -34,7 +41,6 @@ adminVideoRouter.post("/trigger-pipeline", zValidator("json", triggerSchema), as
     return c.json({ error: "Pipeline not configured" }, 500);
   }
 
-  // CF Worker callback URL — Lambda will POST SPLIT_COMPLETE / MASTER_PLAYLIST_READY / ERROR here
   const origin = new URL(c.req.url).origin;
   const callbackUrl = `${origin}/api/public/video/pipeline-callback`;
 
@@ -62,7 +68,7 @@ adminVideoRouter.post("/trigger-pipeline", zValidator("json", triggerSchema), as
 
     const result = (await resp.json()) as Record<string, unknown>;
 
-    // Mark video as SPLITTING in main DB
+    // Update video status to SPLITTING in main DB
     const { createDb } = await import("@oedulms/db");
     const { videos } = await import("@oedulms/db/schema/videos");
     const { eq } = await import("@oedulms/db/dzl");
@@ -79,27 +85,93 @@ adminVideoRouter.post("/trigger-pipeline", zValidator("json", triggerSchema), as
 });
 
 // ── GET /admin/video/:videoId/status ─────────────────────────────────────────
-// Calls the Lambda /status endpoint — reads from pipeline Neon DB, not main DB.
+// Unified status checker. Returns uploading status or maps live progress from Lambda.
 
 adminVideoRouter.get("/video/:videoId/status", async (c) => {
   const videoId = c.req.param("videoId");
-  const lambdaStatusUrl = c.env.LAMBDA_STATUS_URL;
-  const lambdaApiKey = c.env.LAMBDA_API_KEY;
-
-  if (!lambdaStatusUrl || !lambdaApiKey) {
-    return c.json({ error: "Status endpoint not configured" }, 500);
-  }
 
   try {
+    // 1. Check main DB status first
+    const { createDb } = await import("@oedulms/db");
+    const { videos } = await import("@oedulms/db/schema/videos");
+    const { eq } = await import("@oedulms/db/dzl");
+    const db = createDb();
+
+    const rows = await db.select().from(videos).where(eq(videos.id, videoId)).limit(1);
+    if (!rows[0]) return c.json({ error: "Not found" }, 404);
+    const v = rows[0];
+
+    // If still in uploading state, return immediately
+    if (v.processingStatus === "UPLOADING" || v.processingStatus === "IDLE") {
+      return c.json({
+        videoId: v.id,
+        status: v.processingStatus,
+        progress: 0,
+        masterUrl: null,
+        errorMessage: null,
+      });
+    }
+
+    // If already fully processed, return READY
+    if (v.processingStatus === "READY") {
+      return c.json({
+        videoId: v.id,
+        status: "READY",
+        progress: 100,
+        masterUrl: v.hlsMasterPlaylistUrl,
+        errorMessage: null,
+      });
+    }
+
+    // If failed, return ERROR
+    if (v.processingStatus === "ERROR") {
+      return c.json({
+        videoId: v.id,
+        status: "ERROR",
+        progress: 0,
+        masterUrl: null,
+        errorMessage: v.processingError,
+      });
+    }
+
+    // 2. If it's SPLITTING or ENCODING, fetch live progress from Lambda status endpoint
+    const lambdaStatusUrl = c.env.LAMBDA_STATUS_URL;
+    const lambdaApiKey = c.env.LAMBDA_API_KEY;
+
+    if (!lambdaStatusUrl || !lambdaApiKey) {
+      // Fallback if status Lambda is not configured
+      return c.json({
+        videoId: v.id,
+        status: v.processingStatus,
+        progress: v.processingStatus === "SPLITTING" ? 15 : 45,
+        masterUrl: null,
+        errorMessage: null,
+      });
+    }
+
     const resp = await fetch(`${lambdaStatusUrl}?videoId=${encodeURIComponent(videoId)}`, {
       headers: { "x-api-key": lambdaApiKey },
     });
 
-    if (resp.status === 404) return c.json({ error: "Not found" }, 404);
-    if (!resp.ok) return c.json({ error: "Status fetch failed" }, 502);
+    if (resp.ok) {
+      const state = (await resp.json()) as LambdaStatusResponse;
+      return c.json({
+        videoId: v.id,
+        status: state.status, // SPLITTING, ENCODING, READY, ERROR
+        progress: state.progress, // 0 to 100
+        masterUrl: state.masterUrl,
+        errorMessage: state.errorMessage,
+      });
+    }
 
-    const state = await resp.json();
-    return c.json(state);
+    // Final fallback
+    return c.json({
+      videoId: v.id,
+      status: v.processingStatus,
+      progress: 30,
+      masterUrl: null,
+      errorMessage: null,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return c.json({ error: msg }, 500);
