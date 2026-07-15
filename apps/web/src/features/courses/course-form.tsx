@@ -214,7 +214,9 @@ export function CourseForm({
             {/* Title */}
             <form.Field name="title">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid =
+                  (field.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                  !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid}>
                     <FieldLabel htmlFor={field.name}>Course Title *</FieldLabel>
@@ -235,7 +237,9 @@ export function CourseForm({
             {/* Short Description */}
             <form.Field name="shortDescription">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid =
+                  (field.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                  !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid}>
                     <FieldLabel htmlFor={field.name}>Short Description</FieldLabel>
@@ -257,7 +261,9 @@ export function CourseForm({
             {/* Full Description */}
             <form.Field name="description">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid =
+                  (field.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                  !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid}>
                     <FieldLabel htmlFor={field.name}>Full Description</FieldLabel>
@@ -275,7 +281,9 @@ export function CourseForm({
             {/* Thumbnail Image */}
             <form.Field name="thumbnail">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid =
+                  (field.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                  !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid} className="max-w-md">
                     <FieldLabel htmlFor={field.name}>Thumbnail Image</FieldLabel>
@@ -294,7 +302,9 @@ export function CourseForm({
             {/* Trailer Video */}
             <form.Field name="trailerVideo">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid =
+                  (field.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                  !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid} className="max-w-md">
                     <FieldLabel htmlFor={field.name}>Trailer Video</FieldLabel>
@@ -361,15 +371,6 @@ export function CourseForm({
                             onChange={(e) => field.handleChange(e.target.value)}
                             disabled={isPending}
                           />
-                          {field.state.value && (
-                            <div className="border rounded-lg overflow-hidden bg-muted/30 aspect-video flex items-center justify-center">
-                              <video
-                                src={field.state.value}
-                                controls
-                                className="size-full bg-black object-contain"
-                              />
-                            </div>
-                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -413,7 +414,9 @@ export function CourseForm({
               {/* Price */}
               <form.Field name="price">
                 {(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid =
+                    (field.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                    !field.state.meta.isValid;
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Price ($)</FieldLabel>
@@ -437,7 +440,9 @@ export function CourseForm({
               {/* Discount Price */}
               <form.Field name="discountPrice">
                 {(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid =
+                    (field.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                    !field.state.meta.isValid;
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Discount ($)</FieldLabel>
@@ -622,6 +627,9 @@ export function CourseForm({
               <form.Field name="faqs">
                 {(field) => {
                   const faqs: FaqInput[] = (field.state.value as FaqInput[]) || [];
+                  const isInvalid =
+                    (field.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                    !field.state.meta.isValid;
 
                   const addFaq = () => {
                     field.handleChange([...faqs, { question: "", answer: "" }]);
@@ -702,6 +710,10 @@ export function CourseForm({
                         <Plus className="size-4" data-icon="inline-start" />
                         Add FAQ
                       </Button>
+
+                      {isInvalid && (
+                        <FormError isInvalid={isInvalid} errors={field.state.meta.errors} />
+                      )}
                     </div>
                   );
                 }}

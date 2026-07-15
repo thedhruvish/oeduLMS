@@ -384,15 +384,6 @@ export function LectureSheet({
                               value={field.state.value || ""}
                               onChange={(e) => field.handleChange(e.target.value)}
                             />
-                            {field.state.value && (
-                              <div className="border rounded-lg overflow-hidden bg-muted/30 aspect-video flex items-center justify-center">
-                                <video
-                                  src={field.state.value}
-                                  controls
-                                  className="size-full bg-black object-contain"
-                                />
-                              </div>
-                            )}
                           </motion.div>
                         )}
                       </AnimatePresence>
