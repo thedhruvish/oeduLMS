@@ -43,6 +43,7 @@ function AdminLayout() {
     if (path.endsWith("/admin/students")) return "Students";
     if (path.endsWith("/admin/enrollments")) return "Enrollments";
     if (path.endsWith("/admin/coupons")) return "Coupons";
+    if (path.endsWith("/admin/theme")) return "Theme Settings";
     return "Overview";
   };
 

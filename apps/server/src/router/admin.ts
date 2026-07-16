@@ -9,6 +9,7 @@ import { adminCouponsRouter } from "../admin/coupons";
 import { enrollmentsRouter } from "../admin/enrollments";
 import { adminSettingsRouter } from "../admin/settings";
 import { adminVideoRouter } from "../admin/video";
+import { adminThemeRouter } from "../admin/theme";
 
 export const adminRouter = new Hono<AppVariables>();
 
@@ -24,3 +25,4 @@ adminRouter.route("/coupons", adminCouponsRouter);
 adminRouter.route("/enrollments", enrollmentsRouter);
 adminRouter.route("/settings", adminSettingsRouter);
 adminRouter.route("/video", adminVideoRouter);
+adminRouter.route("/theme", adminThemeRouter);

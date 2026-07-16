@@ -6,6 +6,7 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import "../index.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { DynamicThemeProvider } from "@/components/dynamic-theme-provider";
 import type { QueryClient } from "@tanstack/react-query";
 import type { AuthContextType } from "@/types/auth";
 import NotFound from "@/components/not-found";
@@ -47,11 +48,13 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <TooltipProvider>
-          <Outlet />
-          <Toaster richColors />
-          <GlobalConfirmDialog />
-        </TooltipProvider>
+        <DynamicThemeProvider>
+          <TooltipProvider>
+            <Outlet />
+            <Toaster richColors />
+            <GlobalConfirmDialog />
+          </TooltipProvider>
+        </DynamicThemeProvider>
       </ThemeProvider>
       <TanStackRouterDevtools position="bottom-left" />
     </>

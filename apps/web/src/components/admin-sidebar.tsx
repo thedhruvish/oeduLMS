@@ -8,6 +8,7 @@ import {
   Ticket,
   Settings,
   MessageSquare,
+  Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -70,6 +71,11 @@ export function AdminSidebar() {
       title: "Enrollments",
       to: "/admin/enrollments",
       icon: GraduationCap,
+    },
+    {
+      title: "Theme Settings",
+      to: "/admin/theme",
+      icon: Palette,
     },
     {
       title: "Settings",
