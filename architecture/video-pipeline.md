@@ -44,7 +44,8 @@ Once individual chunk tasks are pulled from the queue:
 
 - **Adaptive Quality Transcoding**: Worker nodes transcode each chunk into the requested quality bitrate ladder (e.g., 360p, 720p, 1080p) using CPU resources.
 - **4-Second Segments**: The transcoded quality streams are segmented into exactly **4-second HLS segments** (`.ts` files).
-- **Result**: Sizing HLS segments to exactly 4 seconds allows smooth adaptive bitrate switching under varying networks, reduces initial load latency, and speeds up client seeks.
+- **HLS Segment Stitching**: Once all chunks complete transcoding, the callback Lambda downloads each chunk's playlist, parses the segment metadata, prepends relative chunk directories (e.g. `../chunks/chunk_000/h144/segment_0000.ts`), and stitches them sequentially into a single continuous media playlist. This ensures playability since HLS clients do not support nested VOD playlists.
+- **Result**: Sizing HLS segments to exactly 4 seconds allows smooth ABR (Adaptive Bitrate) switching, reduces latency, and supports seamless playback of the stitched HLS segments.
 
 ---
 
@@ -155,3 +156,11 @@ Located in [apps/web/src/features/courses/lecture-sheet.tsx](../apps/web/src/fea
 - **Transcoding Progress Bar**: Animates real-time completion percentages.
 - **Success Indicator**: Shows a green confirmation notice (`✓ Adaptive HLS stream generated successfully.`) when the video is ready.
 - **Error Banner**: Highlights pipeline warnings and logs if the status is `ERROR`.
+
+---
+
+## 🛠️ Resilient System Adjustments
+
+To ensure production reliability and prevent edge-case failures, the pipeline implements:
+- **Integer Duration Casting**: Every input video duration is automatically normalized via `Math.round(durationSeconds || 0)` inside the `initVideoState` DB handler in `aws-lambda-trigger`. This prevents SQL driver syntax crashes when float durations are reported.
+- **Double Protocol Protection**: Strips `https?://` dynamically from the `R2_PUBLIC_DOMAIN` environment variable in both the edge server and the callback Lambda. This guarantees that generated playlist URLs do not result in double protocol prefixes (such as `https://https://...`).

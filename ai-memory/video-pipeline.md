@@ -54,7 +54,7 @@ flowchart TD
 
     APIGW --> L_Callback
     L_Callback -->|14. Increment completed_chunks| PDB
-    L_Callback -->|15. If all chunks done,\nbuild master.m3u8| R2
+    L_Callback -->|15. If all chunks done,\nfetch chunk playlists & stitch segments| R2
     
     L_Callback -->|16. Forward CF events\n(SPLIT_COMPLETE / READY / ERROR)| CW_Callback
     CW_Callback -->|17. Update state & set hlsUrl/duration| MainDB
@@ -237,3 +237,12 @@ To reduce storage costs, eliminate idle compute charges, and improve developer d
 
 ### H. Worker S3 Log Persistence
 *   **Action:** The worker dynamically resolves its EC2 instance ID on boot. It uploads its processing logs (`/var/log/video-worker.log`) to the S3 staging bucket under `logs/<instanceId>/worker.log` every 60 seconds and performs a final blocking flush during instance shutdown.
+
+### I. HLS Media Playlist Segment Stitching
+*   **Action:** When compiling the final variant playlists, the Callback Lambda downloads the individual chunk playlists from R2, parses and extracts the `#EXTINF` segment tags, prepends the relative path to the chunk folder (e.g., `../chunks/chunk_000/h144/segment_0000.ts`), and stitches them into a single continuous media playlist. It dynamically aggregates target durations across chunks. This resolves playback failures since HLS clients do not support nested VOD playlists.
+
+### J. Float Duration Rounding Protection
+*   **Action:** To prevent driver crashes in Neon Postgres database insertion queries (expecting integer values for `duration_seconds`), the callback Lambda wraps incoming float values with `Math.round(durationSeconds || 0)` inside the `initVideoState` database logic.
+
+### K. Double Protocol Prefix Prevention
+*   **Action:** Strips protocol prefixes (`https://` or `http://`) dynamically from the `R2_PUBLIC_DOMAIN` environment variable in both the Lambda callback handler and server endpoints to prevent double protocol construction (e.g. `https://https://...`).
