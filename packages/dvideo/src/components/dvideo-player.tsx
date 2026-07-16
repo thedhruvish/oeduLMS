@@ -43,6 +43,7 @@ interface Props {
   onProgressUpdate?: (currentTime: number, duration: number) => void;
   initialPlaybackRate?: number;
   onPlaybackRateChange?: (rate: number) => void;
+  onError?: (error?: unknown) => void;
 }
 
 function DvideoPlayerInner({
@@ -56,6 +57,7 @@ function DvideoPlayerInner({
   onProgressUpdate,
   initialPlaybackRate,
   onPlaybackRateChange,
+  onError,
 }: Props) {
   const store = Player.usePlayer();
 
@@ -463,6 +465,7 @@ function DvideoPlayerInner({
           onSeeking={() => setIsBuffering(true)}
           onSeeked={() => setIsBuffering(false)}
           onCanPlay={() => setIsBuffering(false)}
+          onError={onError}
         />
       ) : (
         <Video
@@ -475,6 +478,7 @@ function DvideoPlayerInner({
           onSeeking={() => setIsBuffering(true)}
           onSeeked={() => setIsBuffering(false)}
           onCanPlay={() => setIsBuffering(false)}
+          onError={onError}
         />
       )}
 

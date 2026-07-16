@@ -10,6 +10,7 @@ export interface Lecture {
   slug: string;
   description: string | null;
   videoUrl: string | null;
+  hlsUrl: string | null;
   thumbnail: string | null;
   duration: number;
   isPreview: boolean;

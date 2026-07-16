@@ -27,6 +27,7 @@ import {
   Download,
   Link2,
   RefreshCw,
+  Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { FormError } from "@/components/ui/form-error";
@@ -36,6 +37,7 @@ import { useCreateLecture, useUpdateLecture, type Lecture } from "@/api/curricul
 import { useGetVideoStatus, useReTriggerVideo } from "@/api/video";
 import { uploadFileToS3 } from "@/api/media";
 import { cn } from "@oedulms/ui/lib/utils";
+import { VideoPlayerModal } from "@/features/public/courses/components/video-player-modal";
 
 import { DatePickerTime } from "@/components/ui/date-picker-time";
 
@@ -86,6 +88,16 @@ export function LectureSheet({
   });
   const [isUploadingAttachment, setIsUploadingAttachment] = React.useState(false);
   const [attachmentProgress, setAttachmentProgress] = React.useState<number | null>(null);
+  const [previewVideo, setPreviewVideo] = React.useState<{ videoUrl: string; hlsUrl?: string | null } | null>(null);
+  const [previewVideoTitle, setPreviewVideoTitle] = React.useState<string>("");
+
+  const handlePlayPreview = (url: string) => {
+    setPreviewVideo({
+      videoUrl: url,
+      hlsUrl: editingLecture?.hlsUrl,
+    });
+    setPreviewVideoTitle(editingLecture?.title || "Video Preview");
+  };
 
   const {
     data: pipelineStatus,
@@ -360,7 +372,7 @@ export function LectureSheet({
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.2 }}
                           >
-                            <MediaUploader
+                             <MediaUploader
                               value={field.state.value || ""}
                               maxSize={100 * 1024 * 1024 * 1024} // 100GB
                               onChange={(url) => {
@@ -370,6 +382,7 @@ export function LectureSheet({
                               acceptType="video"
                               directory="videos"
                               backgroundUpload={true}
+                              onPlayPreview={handlePlayPreview}
                             />
                           </motion.div>
                         ) : (
@@ -388,6 +401,18 @@ export function LectureSheet({
                               value={field.state.value || ""}
                               onChange={(e) => field.handleChange(e.target.value)}
                             />
+                            {field.state.value && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-fit flex items-center gap-1.5 cursor-pointer mt-1"
+                                onClick={() => handlePlayPreview(field.state.value || "")}
+                              >
+                                <Play className="size-3.5 fill-current" />
+                                <span>Preview Video</span>
+                              </Button>
+                            )}
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -897,6 +922,15 @@ export function LectureSheet({
           </Button>
         </SheetFooter>
       </SheetContent>
+      {previewVideo && (
+        <VideoPlayerModal
+          isOpen={!!previewVideo}
+          onClose={() => setPreviewVideo(null)}
+          videoUrl={previewVideo.videoUrl}
+          hlsUrl={previewVideo.hlsUrl}
+          title={`Preview: ${previewVideoTitle}`}
+        />
+      )}
     </Sheet>
   );
 }

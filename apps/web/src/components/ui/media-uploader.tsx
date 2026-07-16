@@ -1,6 +1,6 @@
 import * as React from "react";
-import { useDropzone, type Accept } from "react-dropzone";
-import { UploadCloud, X, Film, Loader2 } from "lucide-react";
+import { useDropzone, type Accept, type FileRejection } from "react-dropzone";
+import { UploadCloud, X, Film, Loader2, Play } from "lucide-react";
 import { Button } from "@oedulms/ui/components/button";
 import { uploadFileToS3, deleteFileFromS3, startBackgroundUpload } from "@/api/media";
 import { useUploadStore } from "@/store/upload-store";
@@ -17,6 +17,7 @@ interface MediaUploaderProps {
   maxSize?: number; // in bytes
   backgroundUpload?: boolean;
   onUploadStart?: (uploadId: string) => void;
+  onPlayPreview?: (url: string) => void;
 }
 
 export function MediaUploader({
@@ -28,6 +29,7 @@ export function MediaUploader({
   maxSize = 100 * 1024 * 1024, // 100MB default
   backgroundUpload = false,
   onUploadStart,
+  onPlayPreview,
 }: MediaUploaderProps) {
   const [progress, setProgress] = React.useState<number | null>(null);
   const [isUploading, setIsUploading] = React.useState(false);
@@ -57,7 +59,30 @@ export function MediaUploader({
   };
 
   const onDrop = React.useCallback(
-    async (acceptedFiles: File[]) => {
+    async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
+      if (fileRejections && fileRejections.length > 0) {
+        const error = fileRejections[0].errors[0];
+        let message = "File was rejected.";
+        if (error.code === "file-too-large") {
+          let sizeLimit = "100MB";
+          if (maxSize) {
+            const gb = maxSize / (1024 * 1024 * 1024);
+            if (gb >= 1) {
+              sizeLimit = `${gb.toFixed(0)}GB`;
+            } else {
+              sizeLimit = `${(maxSize / (1024 * 1024)).toFixed(0)}MB`;
+            }
+          }
+          message = `File is too large. Max size is ${sizeLimit}.`;
+        } else if (error.code === "file-invalid-type") {
+          message = `Invalid file type. Only ${acceptType === "video" ? "videos" : acceptType === "image" ? "images" : "supported files"} are allowed.`;
+        } else {
+          message = error.message;
+        }
+        toast.error(message);
+        return;
+      }
+
       const file = acceptedFiles[0];
       if (!file) return;
 
@@ -92,7 +117,7 @@ export function MediaUploader({
         }
       }
     },
-    [directory, onChange, backgroundUpload, onUploadStart]
+    [directory, onChange, backgroundUpload, onUploadStart, maxSize, acceptType]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -157,7 +182,21 @@ export function MediaUploader({
           {isImage(value) ? (
             <img src={value} alt="Uploaded preview" className="size-full object-cover" />
           ) : isVideo(value) ? (
-            <video src={value} controls className="size-full bg-black object-contain" />
+            onPlayPreview ? (
+              <div  
+                onClick={() => onPlayPreview(value)}
+                className="relative size-full bg-muted flex items-center justify-center cursor-pointer group/player"
+              >
+                <div className="absolute inset-0 bg-background/40 flex items-center justify-center group-hover/player:bg-background/60 transition-colors">
+                  <div className="size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg group-hover/player:scale-110 transition-transform">
+                    <Play className="size-5 fill-current translate-x-0.5" />
+                  </div>
+                </div>
+                <Film className="size-12 text-white/30" />
+              </div>
+            ) : (
+              <video src={value} controls className="size-full bg-muted object-contain" />
+            )
           ) : (
             <div className="flex flex-col items-center gap-2 text-muted-foreground p-4">
               <Film className="size-8 text-primary" />

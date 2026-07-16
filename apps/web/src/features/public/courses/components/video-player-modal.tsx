@@ -1,13 +1,18 @@
+import React, { Suspense } from "react";
 import { motion } from "motion/react";
-import { X, Play } from "lucide-react";
+import { X, Play, Loader2 } from "lucide-react";
 import { Button } from "@oedulms/ui/components/button";
-import { DvideoPlayer } from "@oedulms/dvideo";
+
+const LazyDvideoPlayer = React.lazy(() =>
+  import("@oedulms/dvideo").then((m) => ({ default: m.DvideoPlayer }))
+);
 
 interface VideoPlayerModalProps {
   isOpen: boolean;
   onClose: () => void;
   videoUrl: string;
   title: string;
+  hlsUrl?: string | null;
 }
 
 function isYouTubeUrl(url: string): boolean {
@@ -47,7 +52,20 @@ function getYouTubeEmbedUrl(url: string): string {
   return url;
 }
 
-export function VideoPlayerModal({ isOpen, onClose, videoUrl, title }: VideoPlayerModalProps) {
+export function VideoPlayerModal({ isOpen, onClose, videoUrl, title, hlsUrl }: VideoPlayerModalProps) {
+  const [activeUrl, setActiveUrl] = React.useState(hlsUrl || videoUrl);
+
+  React.useEffect(() => {
+    setActiveUrl(hlsUrl || videoUrl);
+  }, [hlsUrl, videoUrl]);
+
+  const handlePlayerError = () => {
+    if (hlsUrl && activeUrl === hlsUrl && videoUrl) {
+      console.warn("HLS stream failed to play, falling back to direct videoUrl:", videoUrl);
+      setActiveUrl(videoUrl);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -58,7 +76,7 @@ export function VideoPlayerModal({ isOpen, onClose, videoUrl, title }: VideoPlay
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-background/80 backdrop-blur-md"
+        className="fixed inset-0 bg-background/80"
       />
 
       {/* Dialog container */}
@@ -83,7 +101,7 @@ export function VideoPlayerModal({ isOpen, onClose, videoUrl, title }: VideoPlay
         </div>
 
         {/* Video wrapper */}
-        <div className="relative aspect-video bg-black flex items-center justify-center">
+        <div className="relative aspect-video bg-muted flex items-center justify-center">
           {isYouTubeUrl(videoUrl) ? (
             <iframe
               src={getYouTubeEmbedUrl(videoUrl)}
@@ -93,8 +111,17 @@ export function VideoPlayerModal({ isOpen, onClose, videoUrl, title }: VideoPlay
               allowFullScreen
             />
           ) : (
-            <div className="w-full h-full">
-              <DvideoPlayer src={videoUrl} />
+            <div className="w-full h-full flex items-center justify-center">
+              <Suspense
+                fallback={
+                  <div className="flex flex-col items-center gap-2 text-white">
+                    <Loader2 className="size-8 text-primary animate-spin" />
+                    <span className="text-xs font-semibold text-zinc-400">Loading player...</span>
+                  </div>
+                }
+              >
+                <LazyDvideoPlayer src={activeUrl} onError={handlePlayerError} />
+              </Suspense>
             </div>
           )}
         </div>
