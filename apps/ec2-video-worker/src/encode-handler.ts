@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { type EncodeChunkTask, } from "./types";
+import { type EncodeChunkTask } from "./types";
 import {
   downloadFromS3,
   uploadToR2,

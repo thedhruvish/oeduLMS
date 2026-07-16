@@ -1,14 +1,6 @@
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  Search,
-  
-  LogOut,
-  BookOpen,
-  Users,
-  GraduationCap,
-  LayoutDashboard,
-} from "lucide-react";
+import { Search, LogOut, BookOpen, Users, GraduationCap, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
 import { UploadsHeaderIndicator } from "@/components/ui/uploads-header-indicator";
 
@@ -57,7 +49,6 @@ export function AdminHeaderActions() {
     setIsSearchOpen(false);
     navigate({ to });
   };
-
 
   return (
     <div className="flex items-center gap-4">
@@ -112,9 +103,8 @@ export function AdminHeaderActions() {
         </PopoverContent>
       </Popover> */}
       <div className="flex justify-center px-1">
-          <ThemeToggle 
-           className="w-full justify-start" />
-        </div>
+        <ThemeToggle className="w-full justify-start" />
+      </div>
 
       {/* User Profile Avatar Dropdown */}
       <UserProfileDropdown />

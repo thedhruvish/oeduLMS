@@ -1,5 +1,14 @@
 import * as React from "react";
-import { GripVertical, ArrowUp, ArrowDown, Edit, Trash2, Plus, Film, ChevronDown } from "lucide-react";
+import {
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+  Edit,
+  Trash2,
+  Plus,
+  Film,
+  ChevronDown,
+} from "lucide-react";
 import { Card, CardTitle } from "@oedulms/ui/components/card";
 import { Button } from "@oedulms/ui/components/button";
 import { Badge } from "@oedulms/ui/components/badge";

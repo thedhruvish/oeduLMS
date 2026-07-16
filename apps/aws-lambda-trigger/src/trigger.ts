@@ -1,7 +1,4 @@
-import {
-  EC2Client,
-  RunInstancesCommand,
-} from "@aws-sdk/client-ec2";
+import { EC2Client, RunInstancesCommand } from "@aws-sdk/client-ec2";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import {

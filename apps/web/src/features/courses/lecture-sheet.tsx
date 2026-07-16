@@ -394,21 +394,31 @@ export function LectureSheet({
                         <div className="mt-3 p-3 border rounded-lg bg-muted/20 flex flex-col gap-2">
                           <div className="flex items-center justify-between text-xs font-semibold">
                             <span className="text-muted-foreground">Transcoding Status:</span>
-                            <span className={cn(
-                              "px-2 py-0.5 rounded-full text-[10px] uppercase font-bold",
-                              pipelineStatus.status === "READY" && "bg-green-500/10 text-green-500 border border-green-500/20",
-                              pipelineStatus.status === "ERROR" && "bg-destructive/10 text-destructive border border-destructive/20",
-                              (pipelineStatus.status === "SPLITTING" || pipelineStatus.status === "ENCODING") && "bg-blue-500/10 text-blue-500 border border-blue-500/20 animate-pulse",
-                              pipelineStatus.status === "UPLOADING" && "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20"
-                            )}>
-                              {pipelineStatus.status === "READY" ? "READY / PLAYABLE" : pipelineStatus.status}
+                            <span
+                              className={cn(
+                                "px-2 py-0.5 rounded-full text-[10px] uppercase font-bold",
+                                pipelineStatus.status === "READY" &&
+                                  "bg-green-500/10 text-green-500 border border-green-500/20",
+                                pipelineStatus.status === "ERROR" &&
+                                  "bg-destructive/10 text-destructive border border-destructive/20",
+                                (pipelineStatus.status === "SPLITTING" ||
+                                  pipelineStatus.status === "ENCODING") &&
+                                  "bg-blue-500/10 text-blue-500 border border-blue-500/20 animate-pulse",
+                                pipelineStatus.status === "UPLOADING" &&
+                                  "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20"
+                              )}
+                            >
+                              {pipelineStatus.status === "READY"
+                                ? "READY / PLAYABLE"
+                                : pipelineStatus.status}
                             </span>
                           </div>
 
-                          {(pipelineStatus.status === "SPLITTING" || pipelineStatus.status === "ENCODING") && (
+                          {(pipelineStatus.status === "SPLITTING" ||
+                            pipelineStatus.status === "ENCODING") && (
                             <div className="flex flex-col gap-1 mt-1">
                               <div className="h-1.5 w-full bg-muted border border-border rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className="h-full bg-blue-500 transition-all duration-500 ease-out"
                                   style={{ width: `${pipelineStatus.progress}%` }}
                                 />

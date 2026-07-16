@@ -99,9 +99,7 @@ export function ThemeToggle({
         className="w-full justify-start gap-2 rounded-lg px-2"
       >
         {icon}
-        <span className="text-sm font-medium">
-          {isDark ? "Light Mode" : "Dark Mode"}
-        </span>
+        <span className="text-sm font-medium">{isDark ? "Light Mode" : "Dark Mode"}</span>
       </Button>
     </motion.div>
   );

@@ -82,7 +82,6 @@ async function triggerTranscoding(
   }
 }
 
-
 // 1. GET /:courseId/sections — Fetch all sections and nested lectures
 adminCurriculumRouter.get("/:courseId/sections", async (c) => {
   const courseId = c.req.param("courseId");

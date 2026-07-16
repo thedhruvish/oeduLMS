@@ -20,8 +20,6 @@ const app = new Hono<AppVariables>();
 // Logging middleware
 app.use(evlog());
 
-
-
 // CORS
 app.use("/*", async (c, next) => {
   const corsMiddleware = cors({

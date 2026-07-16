@@ -18,6 +18,8 @@ import { Button } from "@oedulms/ui/components/button";
 import { FormError } from "@/components/ui/form-error";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useLogin } from "@/api/auth";
+import { authClient } from "@/lib/auth-client";
+import * as React from "react";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -26,6 +28,33 @@ interface LoginFormProps {
 export function LoginForm({ onSuccess }: LoginFormProps) {
   const navigate = useNavigate();
   const login = useLogin();
+  const [resendLoading, setResendLoading] = React.useState(false);
+
+  const handleResendVerification = async () => {
+    const emailValue = form.state.values.email;
+    if (!emailValue) {
+      toast.error("Please enter your email address first.");
+      return;
+    }
+
+    setResendLoading(true);
+    try {
+      const { error } = await authClient.sendVerificationEmail({
+        email: emailValue,
+        callbackURL: `${window.location.origin}/auth/login`,
+      });
+
+      if (error) {
+        toast.error(error.message || "Failed to send verification email.");
+      } else {
+        toast.success("Verification email sent successfully! Please check your inbox.");
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "An unexpected error occurred.");
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const form = useForm({
     defaultValues: {
@@ -76,8 +105,22 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       >
         <CardContent className="flex flex-col gap-4">
           {login.error?.message && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md" role="alert">
-              {login.error.message}
+            <div
+              className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex flex-col gap-2"
+              role="alert"
+            >
+              <span>{login.error.message}</span>
+              {(login.error as { code?: string }).code === "EMAIL_NOT_VERIFIED" && (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendLoading}
+                  className="text-xs text-primary font-semibold underline hover:text-primary/80 transition text-left cursor-pointer flex items-center gap-1.5"
+                >
+                  {resendLoading && <Loader2 className="size-3 animate-spin" />}
+                  Resend verification email
+                </button>
+              )}
             </div>
           )}
 

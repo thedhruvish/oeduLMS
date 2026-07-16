@@ -45,7 +45,9 @@ export const useLogin = () => {
       });
 
       if (error) {
-        throw new Error(error.message || "Failed to sign in");
+        const err = new Error(error.message || "Failed to sign in");
+        (err as Error & { code?: string }).code = error.code;
+        throw err;
       }
 
       // Fetch fresh /me state immediately to resolve the role

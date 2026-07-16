@@ -672,7 +672,8 @@ export function CourseForm({
                             <form.Field name={`faqs[${index}].question` as any}>
                               {(subField) => {
                                 const isSubInvalid =
-                                  (subField.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                                  (subField.state.meta.isTouched ||
+                                    form.state.submissionAttempts > 0) &&
                                   !subField.state.meta.isValid;
                                 return (
                                   <Field data-invalid={isSubInvalid}>
@@ -685,7 +686,10 @@ export function CourseForm({
                                       onChange={(e) => subField.handleChange(e.target.value as any)}
                                       disabled={isPending}
                                     />
-                                    <FormError isInvalid={isSubInvalid} errors={subField.state.meta.errors} />
+                                    <FormError
+                                      isInvalid={isSubInvalid}
+                                      errors={subField.state.meta.errors}
+                                    />
                                   </Field>
                                 );
                               }}
@@ -694,7 +698,8 @@ export function CourseForm({
                             <form.Field name={`faqs[${index}].answer` as any}>
                               {(subField) => {
                                 const isSubInvalid =
-                                  (subField.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                                  (subField.state.meta.isTouched ||
+                                    form.state.submissionAttempts > 0) &&
                                   !subField.state.meta.isValid;
                                 return (
                                   <Field data-invalid={isSubInvalid}>
@@ -708,7 +713,10 @@ export function CourseForm({
                                       rows={3}
                                       disabled={isPending}
                                     />
-                                    <FormError isInvalid={isSubInvalid} errors={subField.state.meta.errors} />
+                                    <FormError
+                                      isInvalid={isSubInvalid}
+                                      errors={subField.state.meta.errors}
+                                    />
                                   </Field>
                                 );
                               }}

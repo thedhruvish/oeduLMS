@@ -1,12 +1,4 @@
-async function sendEmail({
-  to,
-  subject,
-  html,
-}: {
-  to: string;
-  subject: string;
-  html: string;
-}) {
+async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.RESEND_FROM_EMAIL || "ProTech <onboarding@resend.dev>";
 
@@ -44,13 +36,7 @@ async function sendEmail({
   }
 }
 
-export async function sendVerificationEmail({
-  email,
-  url,
-}: {
-  email: string;
-  url: string;
-}) {
+export async function sendVerificationEmail({ email, url }: { email: string; url: string }) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2>Verify your email address</h2>
@@ -73,13 +59,7 @@ export async function sendVerificationEmail({
   });
 }
 
-export async function sendResetPasswordEmail({
-  email,
-  url,
-}: {
-  email: string;
-  url: string;
-}) {
+export async function sendResetPasswordEmail({ email, url }: { email: string; url: string }) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2>Reset your password</h2>

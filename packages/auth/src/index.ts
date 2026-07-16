@@ -19,18 +19,41 @@ export function createAuth() {
       requireEmailVerification: true,
       enabled: true,
       sendResetPassword: async ({ user, url }) => {
-        await sendResetPasswordEmail({ email: user.email, url });
+        const parsedUrl = new URL(url);
+        const token = parsedUrl.searchParams.get("token") || "";
+        const origin = process.env.CORS_ORIGIN?.replace(/\/$/, "") || "";
+        const resetUrl = origin ? `${origin}/auth/reset-password?token=${token}` : url;
+        await sendResetPasswordEmail({ email: user.email, url: resetUrl });
       },
     },
     emailVerification: {
       enabled: true,
       sendOnSignUp: true,
       sendVerificationEmail: async ({ user, url }) => {
-        await sendVerificationEmail({ email: user.email, url });
+        const parsedUrl = new URL(url);
+        const token = parsedUrl.searchParams.get("token") || "";
+        const origin = process.env.CORS_ORIGIN?.replace(/\/$/, "") || "";
+        const verifyUrl = origin ? `${origin}/auth/verify-email?token=${token}` : url;
+        await sendVerificationEmail({ email: user.email, url: verifyUrl });
       },
     },
     secret: process.env.BETTER_AUTH_SECRET,
     baseURL: process.env.BETTER_AUTH_URL,
+    rateLimit: {
+      enabled: true,
+      window: 60,
+      max: 100,
+      customRules: {
+        "/send-verification-email": {
+          window: 60,
+          max: 3,
+        },
+        "/forget-password": {
+          window: 60,
+          max: 3,
+        },
+      },
+    },
     advanced: {
       defaultCookieAttributes: {
         sameSite: "none",
@@ -40,4 +63,3 @@ export function createAuth() {
     },
   });
 }
-
