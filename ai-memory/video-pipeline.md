@@ -32,10 +32,10 @@ flowchart TD
     end
 
     Teacher["Teacher / Admin\nUploads raw video to S3"]
-    MainDB[("Main PostgreSQL DB\n(Videos Table)")]
+    MainDB[("Main PostgreSQL DB\n(Videos & CourseLectures)")]
 
     Teacher -->|1. Upload raw video| S3
-    Teacher -->|2. Trigger pipeline| CW_Trigger
+    Teacher -->|2. Trigger pipeline via curriculum APIs| CW_Trigger
     CW_Trigger -->|3. POST /trigger\n(x-api-key)| APIGW
     APIGW --> L_Trigger
     
@@ -57,7 +57,7 @@ flowchart TD
     L_Callback -->|15. If all chunks done,\nbuild master.m3u8| R2
     
     L_Callback -->|16. Forward CF events\n(SPLIT_COMPLETE / READY / ERROR)| CW_Callback
-    CW_Callback -->|17. Update state| MainDB
+    CW_Callback -->|17. Update state & set hlsUrl/duration| MainDB
 
     EB -->|2-Min Warning| L_Spot
     L_Spot -->|Let SQS visibility expire| SQS
@@ -112,9 +112,10 @@ Adaptive Bitrate (ABR) transcoding configuration details:
 
 ---
 
-## 4. Pipeline Database Schema
+## 4. Database Schema Configurations
 
-To prevent high-frequency write traffic (e.g., chunk progress updates) from overloading the application's primary transactional database, all pipeline progress and metadata are stored in a dedicated Neon Database instance (`video_pipeline_state` table) via raw SQL:
+### A. Pipeline DB (Separate Neon DB instance)
+Stores local chunk completion counters to protect the main DB from high-frequency transcoding updates.
 
 ```sql
 CREATE TABLE video_pipeline_state (
@@ -130,6 +131,10 @@ CREATE TABLE video_pipeline_state (
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
+
+### B. Main Application DB (`packages/db/src/schema/`)
+- `videos` table: Tracks high-level states (`IDLE`, `SPLITTING`, `ENCODING`, `READY`, `ERROR`) and original details.
+- `course_lectures` table: Contains the `hls_url` (HLS playback URL) and `duration` (length in seconds) columns.
 
 ---
 
@@ -149,13 +154,13 @@ To minimize bandwidth and execution costs, Lambda filters events and only forwar
 
 1.  **`SPLIT_COMPLETE`**:
     *   *Payload:* `{ event: "SPLIT_COMPLETE", videoId, durationSeconds, totalChunks }`
-    *   *CF Action:* Sets the video duration and transitions status to `ENCODING` in the primary DB.
+    *   *CF Action:* Sets `processingStatus` to `ENCODING` in `videos` and updates the lecture `duration` (in seconds) in `course_lectures`.
 2.  **`MASTER_PLAYLIST_READY`**:
     *   *Payload:* `{ event: "MASTER_PLAYLIST_READY", videoId, masterPlaylistR2Key }`
-    *   *CF Action:* Updates public video URL and marks state as `READY` (finished).
+    *   *CF Action:* Sets `processingStatus` to `READY` in `videos`, sets `hlsUrl` in `course_lectures` to the R2 playlist play URL, and sets `publishedAt` to the current time.
 3.  **`ERROR`**:
     *   *Payload:* `{ event: "ERROR", videoId, message }`
-    *   *CF Action:* Transitions video to `ERROR` state and stores error details.
+    *   *CF Action:* Transitions `videos` and `course_lectures` state to `ERROR` and stores error details.
 
 ---
 
@@ -169,14 +174,28 @@ To minimize bandwidth and execution costs, Lambda filters events and only forwar
 
 ---
 
-## 7. API Endpoints
+## 7. Curriculum API & Worker Routing
 
-### Cloudflare Worker (Hono App)
-*   `POST /api/admin/video/trigger-pipeline` (Protected): Called by teachers after uploading. Begins the pipeline.
-*   `GET /api/admin/video/:videoId/status` (Protected): Calls status Lambda to fetch progress percentage and details.
+### Hono API Endpoints (Cloudflare Worker)
+*   `POST /api/admin/video/trigger-pipeline`: Manually trigger the transcoding pipeline for a video.
 *   `POST /api/public/video/pipeline-callback` (Secret Authenticated): Lambda callback receiver.
+*   `GET /api/public/video/:videoId/status`: Unified status polling endpoint. Returns uploading state or proxies to Lambda status.
 
-### AWS API Gateway
-*   `POST /trigger` (API Key Required): Starts SQS enqueueing and EC2 spot provisioning.
-*   `POST /callback` (Open): Internal endpoint for EC2 workers to report completion.
-*   `GET /status` (API Key Required): Queries current state of video from the pipeline database.
+### Automatic Curriculum Trigger (`apps/server/src/admin/curriculum.ts`)
+*   **Lecture Creation (`POST`):** If a `videoUrl` is supplied, it automatically triggers the AWS Lambda pipeline in the background using Hono's non-blocking `c.executionCtx.waitUntil(...)`.
+*   **Lecture Update (`PUT`):** Fetches the previous `videoUrl` from the database. It triggers the transcoding pipeline **only if** the updated `videoUrl` is different from the older one (avoiding duplicate triggers if other metadata is changed).
+
+---
+
+## 8. Frontend Integration (TanStack Query)
+
+### Custom API Hook (`apps/web/src/api/video.ts`)
+Exposes `useGetVideoStatus(videoId)` using React Query. Automatically polls `/api/public/video/:videoId/status` in the background:
+*   **Polling Interval:** 5 seconds.
+*   **Auto-Termination:** Polling terminates automatically once the status reaches `READY` or `ERROR`.
+
+### Lecture Edit Sheet (`apps/web/src/features/courses/lecture-sheet.tsx`)
+Displays a real-time transcoding banner under the video field with:
+1.  **Animated Progress:** An active progress bar showing the exact percentage of transcoded segments.
+2.  **Ready Checkmark:** A green confirmation showing `✓ Adaptive HLS stream generated successfully.` once processing is finished.
+3.  **Errors:** Warning flags displaying the pipeline error message.
