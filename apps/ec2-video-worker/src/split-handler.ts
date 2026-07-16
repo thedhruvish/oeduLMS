@@ -13,13 +13,21 @@ import {
 } from "./storage";
 import { splitVideoIntoChunks } from "./ffmpeg";
 
+import fsSync from "fs";
+
 const execAsync = promisify(exec);
 
 async function downloadFromYouTube(url: string, localPath: string): Promise<void> {
   console.log(`[split] Downloading YouTube video using yt-dlp: ${url}`);
-  await execAsync(
-    `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-playlist "${url}" -o "${localPath}"`
-  );
+  let cmd = `yt-dlp --extractor-args "youtube:player-client=ios" -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-playlist`;
+  
+  if (fsSync.existsSync("/app/cookies.txt")) {
+    console.log("[split] Using cookies.txt for YouTube authentication");
+    cmd += ` --cookies /app/cookies.txt`;
+  }
+  
+  cmd += ` "${url}" -o "${localPath}"`;
+  await execAsync(cmd);
 }
 
 /**
@@ -36,7 +44,7 @@ export const handleSplitTask = async (
   sqsQueueUrl: string,
   chunkDurationSeconds: number
 ): Promise<void> => {
-  const { videoId, sourceS3Url, qualities, callbackUrl } = task;
+  const { videoId, sourceS3Url, qualities, callbackUrl, runId } = task;
 
   console.log(
     JSON.stringify({
@@ -109,13 +117,14 @@ export const handleSplitTask = async (
         qualities,
         hlsSegmentDuration: 4, // 4-second HLS segments as specified
         callbackUrl,
+        runId,
       };
 
       await sqs.send(
         new SendMessageCommand({
           QueueUrl: sqsQueueUrl,
           MessageGroupId: videoId,
-          MessageDeduplicationId: `encode-${videoId}-chunk-${i}`,
+          MessageDeduplicationId: `encode-${videoId}-chunk-${i}-${runId || "legacy"}`,
           MessageBody: JSON.stringify(encodeTask),
         })
       );

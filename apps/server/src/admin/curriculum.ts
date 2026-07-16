@@ -16,7 +16,7 @@ async function triggerTranscoding(
   lectureId: string,
   videoUrl: string,
   qualities: (string | number)[] = [360, 720, 1080],
-  duration?: number
+  _duration?: number
 ) {
   const lambdaTriggerUrl = c.env.LAMBDA_TRIGGER_URL;
   const lambdaApiKey = c.env.LAMBDA_API_KEY;
@@ -28,7 +28,10 @@ async function triggerTranscoding(
 
   const origin = new URL(c.req.url).origin;
   const callbackUrl = `${origin}/api/public/video/pipeline-callback`;
-  const numericQualities = (qualities || []).map(Number);
+  const cleanQualities = (qualities || [])
+    .map((q) => parseInt(String(q).replace(/\D/g, ""), 10))
+    .filter((num) => !isNaN(num) && num > 0);
+  const numericQualities = cleanQualities.length ? cleanQualities : [360, 720, 1080];
 
   try {
     const { createDb } = await import("@oedulms/db");
@@ -54,7 +57,13 @@ async function triggerTranscoding(
         processingStatus: "SPLITTING",
       });
     }
-
+    const body  = JSON.stringify({
+        videoId: lectureId,
+        sourceS3Url: videoUrl,
+        qualities: numericQualities,
+        callbackUrl,
+      })
+      console.log(body)
     // Call Lambda trigger endpoint
     const resp = await fetch(lambdaTriggerUrl, {
       method: "POST",
@@ -62,13 +71,7 @@ async function triggerTranscoding(
         "Content-Type": "application/json",
         "x-api-key": lambdaApiKey,
       },
-      body: JSON.stringify({
-        videoId: lectureId,
-        sourceS3Url: videoUrl,
-        qualities: numericQualities,
-        durationSeconds: duration,
-        callbackUrl,
-      }),
+      body,
     });
 
     if (!resp.ok) {

@@ -84,6 +84,100 @@ adminVideoRouter.post("/trigger-pipeline", zValidator("json", triggerSchema), as
   }
 });
 
+const retriggerSchema = z.object({
+  videoId: z.string().min(1),
+});
+
+// ── POST /admin/video/re-trigger ──────────────────────────────────────────────
+// Manually re-trigger the transcoding pipeline for an existing video/lecture.
+// Resolves the SQS FIFO deduplication issues using a new runId-based identifier.
+adminVideoRouter.post("/re-trigger", zValidator("json", retriggerSchema), async (c) => {
+  const { videoId } = c.req.valid("json");
+
+  const lambdaTriggerUrl = c.env.LAMBDA_TRIGGER_URL;
+  const lambdaApiKey = c.env.LAMBDA_API_KEY;
+
+  if (!lambdaTriggerUrl || !lambdaApiKey) {
+    return c.json({ error: "Pipeline not configured" }, 500);
+  }
+
+  const origin = new URL(c.req.url).origin;
+  const callbackUrl = `${origin}/api/public/video/pipeline-callback`;
+
+  try {
+    const { createDb } = await import("@oedulms/db");
+    const { courseLectures } = await import("@oedulms/db/schema/courses");
+    const { videos } = await import("@oedulms/db/schema/videos");
+    const { eq } = await import("@oedulms/db/dzl");
+    const db = createDb();
+
+    // Query lecture details to retrieve video url, qualities, and duration
+    const lectures = await db.select().from(courseLectures).where(eq(courseLectures.id, videoId)).limit(1);
+    if (!lectures[0]) {
+      return c.json({ error: "Lecture not found" }, 404);
+    }
+
+    const lecture = lectures[0];
+    if (!lecture.videoUrl) {
+      return c.json({ error: "No video URL associated with this lecture" }, 400);
+    }
+
+    // Clean and parse qualities (removing non-digits like 'p')
+    const qualities = lecture.qualities || [];
+    const cleanQualities = qualities
+      .map((q) => parseInt(String(q).replace(/\D/g, ""), 10))
+      .filter((num) => !isNaN(num) && num > 0);
+    const numericQualities = cleanQualities.length ? cleanQualities : [360, 720, 1080];
+
+    // Call Lambda trigger endpoint
+    const resp = await fetch(lambdaTriggerUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": lambdaApiKey,
+      },
+      body: JSON.stringify({
+        videoId,
+        sourceS3Url: lecture.videoUrl,
+        qualities: numericQualities,
+        durationSeconds: lecture.duration > 0 ? lecture.duration : undefined,
+        callbackUrl,
+      }),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error(`[re-trigger] Lambda ${resp.status}: ${text}`);
+      return c.json({ error: "Pipeline failed to start", details: text }, 502);
+    }
+
+    const result = (await resp.json()) as Record<string, unknown>;
+
+    // Update video status to SPLITTING in main DB
+    const existing = await db.select().from(videos).where(eq(videos.id, videoId)).limit(1);
+    if (existing[0]) {
+      await db
+        .update(videos)
+        .set({
+          processingStatus: "SPLITTING",
+          processingError: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(videos.id, videoId));
+    } else {
+      await db.insert(videos).values({
+        id: videoId,
+        processingStatus: "SPLITTING",
+      });
+    }
+
+    return c.json({ ok: true, ...result });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ error: msg }, 500);
+  }
+});
+
 // ── GET /admin/video/:videoId/status ─────────────────────────────────────────
 // Unified status checker. Returns uploading status or maps live progress from Lambda.
 

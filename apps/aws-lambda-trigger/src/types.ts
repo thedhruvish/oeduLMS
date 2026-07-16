@@ -22,6 +22,7 @@ export interface SplitTask {
   qualities: VideoQuality[];
   durationSeconds?: number;
   callbackUrl: string;
+  runId?: string;
 }
 
 export interface EncodeChunkTask {
@@ -33,6 +34,7 @@ export interface EncodeChunkTask {
   qualities: VideoQuality[];
   hlsSegmentDuration: number;
   callbackUrl: string;
+  runId?: string;
 }
 
 export type SQSTask = SplitTask | EncodeChunkTask;

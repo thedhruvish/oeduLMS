@@ -7,7 +7,7 @@
   "scripts": {
     "build": "bun build ./src/index.ts --target=node --outdir=./dist --external=@aws-sdk/* --format=cjs",
     "build:zip": "bun run build && cd dist && zip -r ../lambda.zip .",
-    "dev": "tsc -w"
+    "dev:lambda": "tsc -w"
   },
   "dependencies": {
     "@aws-sdk/client-ec2": "^3.1087.0",

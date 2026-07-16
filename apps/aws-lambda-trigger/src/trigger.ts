@@ -25,7 +25,8 @@ const sqs = new SQSClient({ region: process.env.AWS_REGION ?? "us-east-1" });
  *   …
  */
 function calcInstanceCount(durationSeconds: number): number {
-  return Math.ceil(durationSeconds / 3600);
+  const count = Math.ceil(durationSeconds / 3600);
+  return Math.max(1, count);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,6 +69,7 @@ fi
 mkdir -p /app
 aws s3 cp s3://${process.env.WORKER_ASSETS_BUCKET}/ec2-video-worker.tar.gz /app/worker.tar.gz
 tar -xzf /app/worker.tar.gz -C /app
+aws s3 cp s3://${process.env.WORKER_ASSETS_BUCKET}/cookies.txt /app/cookies.txt || true
 
 # ── Install Node deps (already bundled in tar, but run just in case) ─────────
 cd /app
@@ -144,6 +146,8 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
   const chunkDurationMinutes = hasUltraHD ? 4 : isRecommendedOnly ? 20 : 8;
   const chunkDurationSeconds = chunkDurationMinutes * 60;
 
+  const runId = Math.random().toString(36).substring(2, 10) + "-" + Date.now();
+
   // ── Enqueue the SPLIT task ───────────────────────────────────────────────────
   const splitTask: SplitTask = {
     taskType: "SPLIT",
@@ -152,13 +156,14 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     qualities: rawQualities,
     durationSeconds,
     callbackUrl,
+    runId,
   };
 
   await sqs.send(
     new SendMessageCommand({
       QueueUrl: process.env.QUEUE_URL!,
       MessageGroupId: videoId, // FIFO queue – order within a video
-      MessageDeduplicationId: `split-${videoId}`,
+      MessageDeduplicationId: `split-${videoId}-${runId}`,
       MessageBody: JSON.stringify(splitTask),
       MessageAttributes: {
         chunkDurationSeconds: {
@@ -170,7 +175,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
   );
 
   // ── Launch EC2 spot instances ─────────────────────────────────────────────
-  const knownDuration = durationSeconds ?? 3600; // default 1 h if unknown
+  const knownDuration = (durationSeconds && !isNaN(durationSeconds) && durationSeconds > 0) ? durationSeconds : 3600;
   const instanceCount = calcInstanceCount(knownDuration);
 
   const userData = buildUserData({

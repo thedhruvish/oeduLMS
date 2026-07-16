@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { axiosClient } from "@/lib/axios-client";
 
 export interface VideoStatus {
@@ -29,6 +29,22 @@ export function useGetVideoStatus(videoId: string | undefined, enabled: boolean 
         return false; // Stop polling once complete or failed
       }
       return 5000; // Poll every 5 seconds
+    },
+  });
+}
+
+/**
+ * Hook to re-trigger the video transcoding pipeline.
+ */
+export function useReTriggerVideo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (videoId: string) => {
+      const { data } = await axiosClient.post(`/admin/video/re-trigger`, { videoId });
+      return data;
+    },
+    onSuccess: (_, videoId) => {
+      queryClient.invalidateQueries({ queryKey: ["video-status", videoId] });
     },
   });
 }

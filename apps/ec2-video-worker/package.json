@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
+    "dev:ec2": "ts-node src/index.ts",
     "package": "npm run build && tar -czf ec2-video-worker.tar.gz dist package.json show-logs.sh"
   },
   "dependencies": {

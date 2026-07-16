@@ -26,13 +26,14 @@ import {
   Settings,
   Download,
   Link2,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { FormError } from "@/components/ui/form-error";
 import { MediaUploader } from "@/components/ui/media-uploader";
 import { useConfirm } from "@/store/confirm-store";
 import { useCreateLecture, useUpdateLecture, type Lecture } from "@/api/curriculum";
-import { useGetVideoStatus } from "@/api/video";
+import { useGetVideoStatus, useReTriggerVideo } from "@/api/video";
 import { uploadFileToS3 } from "@/api/media";
 import { cn } from "@oedulms/ui/lib/utils";
 
@@ -86,10 +87,14 @@ export function LectureSheet({
   const [isUploadingAttachment, setIsUploadingAttachment] = React.useState(false);
   const [attachmentProgress, setAttachmentProgress] = React.useState<number | null>(null);
 
-  const { data: pipelineStatus } = useGetVideoStatus(
-    editingLecture?.id,
-    !!editingLecture && !!editingLecture.videoUrl
-  );
+  const {
+    data: pipelineStatus,
+    refetch: refetchStatus,
+    isPending: isStatusPending,
+    isFetching: isStatusFetching,
+  } = useGetVideoStatus(editingLecture?.id, !!editingLecture && !!editingLecture.videoUrl);
+
+  const reTriggerVideo = useReTriggerVideo();
 
   const lectureForm = useForm({
     formId: editingLecture ? `edit-lecture-${editingLecture.id}` : "create-lecture",
@@ -225,8 +230,7 @@ export function LectureSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="!w-full sm:!w-1/2 !max-w-none h-[90%] flex flex-col">
-        {" "}
+      <SheetContent className="!w-full sm:!w-[85vw] md:!w-[75vw] lg:!w-[65vw] xl:!w-[50vw] !max-w-none h-[90%] flex flex-col">
         <SheetHeader className="p-6 pb-4 border-b shrink-0">
           <SheetTitle>{editingLecture ? "Edit Lecture" : "Add Lecture"}</SheetTitle>
         </SheetHeader>
@@ -390,55 +394,115 @@ export function LectureSheet({
 
                       <FormError isInvalid={isInvalid} errors={field.state.meta.errors} />
 
-                      {pipelineStatus && (
-                        <div className="mt-3 p-3 border rounded-lg bg-muted/20 flex flex-col gap-2">
+                      {((!!editingLecture && !!editingLecture.videoUrl) || isStatusPending || !!pipelineStatus) && (
+                        <div className="mt-3 p-3 border border-border rounded-lg bg-muted/20 flex flex-col gap-2">
                           <div className="flex items-center justify-between text-xs font-semibold">
-                            <span className="text-muted-foreground">Transcoding Status:</span>
-                            <span
-                              className={cn(
-                                "px-2 py-0.5 rounded-full text-[10px] uppercase font-bold",
-                                pipelineStatus.status === "READY" &&
-                                  "bg-green-500/10 text-green-500 border border-green-500/20",
-                                pipelineStatus.status === "ERROR" &&
-                                  "bg-destructive/10 text-destructive border border-destructive/20",
-                                (pipelineStatus.status === "SPLITTING" ||
-                                  pipelineStatus.status === "ENCODING") &&
-                                  "bg-blue-500/10 text-blue-500 border border-blue-500/20 animate-pulse",
-                                pipelineStatus.status === "UPLOADING" &&
-                                  "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20"
-                              )}
-                            >
-                              {pipelineStatus.status === "READY"
-                                ? "READY / PLAYABLE"
-                                : pipelineStatus.status}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-muted-foreground">Transcoding Status:</span>
+                              <button
+                                type="button"
+                                onClick={() => refetchStatus()}
+                                disabled={isStatusFetching || isStatusPending}
+                                className="inline-flex items-center justify-center p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition disabled:opacity-50 cursor-pointer"
+                                title="Refresh status"
+                              >
+                                <RefreshCw className={cn("size-3", isStatusFetching && "animate-spin")} />
+                              </button>
+                            </div>
+                            {isStatusPending ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground font-semibold">
+                                <Loader2 className="size-3 animate-spin" />
+                                CHECKING
+                              </span>
+                            ) : pipelineStatus ? (
+                              <span
+                                className={cn(
+                                  "px-2 py-0.5 rounded-full text-[10px] uppercase font-bold",
+                                  pipelineStatus.status === "READY" &&
+                                    "bg-green-500/10 text-green-500 border border-green-500/20",
+                                  pipelineStatus.status === "ERROR" &&
+                                    "bg-destructive/10 text-destructive border border-destructive/20",
+                                  (pipelineStatus.status === "SPLITTING" ||
+                                    pipelineStatus.status === "ENCODING" ||
+                                    pipelineStatus.status === "UPLOADING") &&
+                                    "bg-blue-500/10 text-blue-500 border border-blue-500/20 animate-pulse",
+                                  pipelineStatus.status === "IDLE" &&
+                                    "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20"
+                                )}
+                              >
+                                {pipelineStatus.status === "READY"
+                                  ? "READY / PLAYABLE"
+                                  : pipelineStatus.status}
+                              </span>
+                            ) : null}
                           </div>
 
-                          {(pipelineStatus.status === "SPLITTING" ||
-                            pipelineStatus.status === "ENCODING") && (
-                            <div className="flex flex-col gap-1 mt-1">
-                              <div className="h-1.5 w-full bg-muted border border-border rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-blue-500 transition-all duration-500 ease-out"
-                                  style={{ width: `${pipelineStatus.progress}%` }}
-                                />
-                              </div>
-                              <span className="text-[10px] text-muted-foreground self-end font-semibold">
-                                {pipelineStatus.progress}% Transcoded
-                              </span>
-                            </div>
-                          )}
+                          {!isStatusPending && pipelineStatus && (
+                            <>
+                              {(pipelineStatus.status === "SPLITTING" ||
+                                pipelineStatus.status === "ENCODING" ||
+                                pipelineStatus.status === "UPLOADING") && (
+                                <div className="flex flex-col gap-1 mt-1">
+                                  <div className="h-1.5 w-full bg-muted border border-border rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-blue-500 transition-all duration-500 ease-out"
+                                      style={{ width: `${pipelineStatus.progress}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground self-end font-semibold">
+                                    {pipelineStatus.status === "UPLOADING"
+                                      ? "Uploading to streaming server..."
+                                      : `${pipelineStatus.progress}% Transcoded (${pipelineStatus.status})`}
+                                  </span>
+                                </div>
+                              )}
 
-                          {pipelineStatus.status === "READY" && (
-                            <span className="text-[10px] text-green-500 font-medium">
-                              ✓ Adaptive HLS stream generated successfully.
-                            </span>
-                          )}
+                              {pipelineStatus.status === "READY" && (
+                                <span className="text-[10px] text-green-500 font-medium">
+                                  ✓ Adaptive HLS stream generated successfully.
+                                </span>
+                              )}
 
-                          {pipelineStatus.status === "ERROR" && (
-                            <span className="text-[10px] text-destructive font-medium">
-                              ⚠ Error: {pipelineStatus.errorMessage || "Transcoding failed."}
-                            </span>
+                              {pipelineStatus.status === "ERROR" && (
+                                <div className="flex flex-col gap-2 mt-1">
+                                  <span className="text-[10px] text-destructive font-medium">
+                                    ⚠ Error: {pipelineStatus.errorMessage || "Transcoding failed."}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-fit text-[10px] h-7 px-3 flex items-center gap-1.5 cursor-pointer border-destructive/30 hover:border-destructive hover:bg-destructive/5 text-destructive"
+                                    onClick={() => {
+                                      if (editingLecture?.id) {
+                                        reTriggerVideo.mutate(editingLecture.id, {
+                                          onSuccess: () => {
+                                            toast.success("Transcoding re-triggered successfully!");
+                                          },
+                                          onError: (err) => {
+                                            toast.error(err?.message || "Failed to re-trigger transcoding.");
+                                          },
+                                        });
+                                      }
+                                    }}
+                                    disabled={reTriggerVideo.isPending}
+                                  >
+                                    {reTriggerVideo.isPending ? (
+                                      <Loader2 className="size-3 animate-spin" />
+                                    ) : (
+                                      <RefreshCw className="size-3" />
+                                    )}
+                                    <span>Re-trigger Transcoding</span>
+                                  </Button>
+                                </div>
+                              )}
+
+                              {pipelineStatus.status === "IDLE" && (
+                                <span className="text-[10px] text-yellow-500 font-medium">
+                                  Waiting to start transcoding...
+                                </span>
+                              )}
+                            </>
                           )}
                         </div>
                       )}
