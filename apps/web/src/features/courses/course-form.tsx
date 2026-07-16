@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useForm } from "@tanstack/react-form";
 import {
   Plus,
@@ -639,13 +640,6 @@ export function CourseForm({
                     field.handleChange(faqs.filter((_, i) => i !== index));
                   };
 
-                  const updateFaq = (index: number, key: keyof FaqInput, value: string) => {
-                    const updated = faqs.map((faq, i) =>
-                      i === index ? { ...faq, [key]: value } : faq
-                    );
-                    field.handleChange(updated);
-                  };
-
                   return (
                     <div className="flex flex-col gap-4">
                       {faqs.length === 0 && (
@@ -654,7 +648,7 @@ export function CourseForm({
                         </p>
                       )}
 
-                      {faqs.map((faq, index) => (
+                      {faqs.map((_faq, index) => (
                         <Card
                           key={index}
                           className="border bg-card shadow-sm rounded-lg overflow-hidden flex flex-col gap-0 py-0"
@@ -675,26 +669,50 @@ export function CourseForm({
                             </Button>
                           </CardHeader>
                           <CardContent className="p-4 flex flex-col gap-4">
-                            <Field>
-                              <FieldLabel>Question</FieldLabel>
-                              <Input
-                                placeholder="e.g. Is this course for beginners?"
-                                value={faq.question}
-                                onChange={(e) => updateFaq(index, "question", e.target.value)}
-                                disabled={isPending}
-                              />
-                            </Field>
+                            <form.Field name={`faqs[${index}].question` as any}>
+                              {(subField) => {
+                                const isSubInvalid =
+                                  (subField.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                                  !subField.state.meta.isValid;
+                                return (
+                                  <Field data-invalid={isSubInvalid}>
+                                    <FieldLabel htmlFor={subField.name}>Question</FieldLabel>
+                                    <Input
+                                      id={subField.name}
+                                      placeholder="e.g. Is this course for beginners?"
+                                      value={(subField.state.value as string) || ""}
+                                      onBlur={subField.handleBlur}
+                                      onChange={(e) => subField.handleChange(e.target.value as any)}
+                                      disabled={isPending}
+                                    />
+                                    <FormError isInvalid={isSubInvalid} errors={subField.state.meta.errors} />
+                                  </Field>
+                                );
+                              }}
+                            </form.Field>
 
-                            <Field>
-                              <FieldLabel>Answer</FieldLabel>
-                              <Textarea
-                                placeholder="e.g. Yes, this course starts from the very basics..."
-                                value={faq.answer}
-                                onChange={(e) => updateFaq(index, "answer", e.target.value)}
-                                rows={3}
-                                disabled={isPending}
-                              />
-                            </Field>
+                            <form.Field name={`faqs[${index}].answer` as any}>
+                              {(subField) => {
+                                const isSubInvalid =
+                                  (subField.state.meta.isTouched || form.state.submissionAttempts > 0) &&
+                                  !subField.state.meta.isValid;
+                                return (
+                                  <Field data-invalid={isSubInvalid}>
+                                    <FieldLabel htmlFor={subField.name}>Answer</FieldLabel>
+                                    <Textarea
+                                      id={subField.name}
+                                      placeholder="e.g. Yes, this course starts from the very basics..."
+                                      value={(subField.state.value as string) || ""}
+                                      onBlur={subField.handleBlur}
+                                      onChange={(e) => subField.handleChange(e.target.value as any)}
+                                      rows={3}
+                                      disabled={isPending}
+                                    />
+                                    <FormError isInvalid={isSubInvalid} errors={subField.state.meta.errors} />
+                                  </Field>
+                                );
+                              }}
+                            </form.Field>
                           </CardContent>
                         </Card>
                       ))}

@@ -31,7 +31,9 @@
     "CDK_DEFAULT_REGION",
     "KEY_PAIR_NAME",
     "R2_SECRET_NAME",
-    "CHUNK_DURATION_SECONDS"
+    "CHUNK_DURATION_SECONDS",
+    "RESEND_API_KEY",
+    "RESEND_FROM_EMAIL"
   ],
   "tasks": {
     "build": {
