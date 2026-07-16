@@ -20,15 +20,7 @@ const app = new Hono<AppVariables>();
 // Logging middleware
 app.use(evlog());
 
-// Identify user for logging (does not block requests)
-app.use("*", async (c, next) => {
-  const identifyUser = createAuthMiddleware(createAuth() as BetterAuthInstance, {
-    exclude: ["/api/auth/**"],
-    maskEmail: true,
-  });
-  await identifyUser(c.get("log"), c.req.raw.headers, c.req.path);
-  await next();
-});
+
 
 // CORS
 app.use("/*", async (c, next) => {
@@ -39,6 +31,16 @@ app.use("/*", async (c, next) => {
     credentials: true,
   });
   return corsMiddleware(c, next);
+});
+
+// Identify user for logging (does not block requests)
+app.use("*", async (c, next) => {
+  const identifyUser = createAuthMiddleware(createAuth() as BetterAuthInstance, {
+    exclude: ["/api/auth/**"],
+    maskEmail: true,
+  });
+  await identifyUser(c.get("log"), c.req.raw.headers, c.req.path);
+  await next();
 });
 
 // Public auth routes (Better Auth)
