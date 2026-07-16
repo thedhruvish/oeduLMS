@@ -43,6 +43,27 @@ set -e
 # ── Environment ──────────────────────────────────────────────────────────────
 ${exports}
 
+# ── Install system dependencies ──────────────────────────────────────────────
+apt-get update
+apt-get install -y curl unzip ffmpeg
+
+if ! command -v aws &> /dev/null; then
+  echo "Installing AWS CLI..."
+  apt-get install -y awscli
+fi
+
+if ! command -v node &> /dev/null; then
+  echo "Installing Node.js 24..."
+  curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+  apt-get install -y nodejs
+fi
+
+if ! command -v yt-dlp &> /dev/null; then
+  echo "Installing yt-dlp..."
+  curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+  chmod a+rx /usr/local/bin/yt-dlp
+fi
+
 # ── Wait for SSM agent, then pull the worker binary/code from S3 ─────────────
 mkdir -p /app
 aws s3 cp s3://${process.env.WORKER_ASSETS_BUCKET}/ec2-video-worker.tar.gz /app/worker.tar.gz
@@ -165,12 +186,17 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     CHUNK_DURATION_SECONDS: String(chunkDurationSeconds),
   });
 
+  const keyName = process.env.KEY_PAIR_NAME;
+  const securityGroupId = process.env.SECURITY_GROUP_ID;
+
   const runResult = await ec2.send(
     new RunInstancesCommand({
       ImageId: process.env.AMI_ID!,
       InstanceType: "c5.2xlarge", // 8 vCPU, good for ffmpeg parallel encode
       MinCount: instanceCount,
       MaxCount: instanceCount,
+      KeyName: keyName || undefined,
+      SecurityGroupIds: securityGroupId ? [securityGroupId] : undefined,
       InstanceMarketOptions: {
         MarketType: "spot",
         SpotOptions: {

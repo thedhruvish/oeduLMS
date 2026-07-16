@@ -199,3 +199,30 @@ Displays a real-time transcoding banner under the video field with:
 1.  **Animated Progress:** An active progress bar showing the exact percentage of transcoded segments.
 2.  **Ready Checkmark:** A green confirmation showing `✓ Adaptive HLS stream generated successfully.` once processing is finished.
 3.  **Errors:** Warning flags displaying the pipeline error message.
+
+---
+
+## 9. Operational Enhancements & Cost Optimization
+
+To reduce storage costs, eliminate idle compute charges, and improve developer diagnostics, the following features have been added:
+
+### A. Immediate S3 Staging Cleanup
+*   **Action:** Once a chunk completes encoding to all qualities and is uploaded to Cloudflare R2, the worker invokes a `DeleteObjectCommand` to immediately delete the raw chunk file (e.g., `chunks/<videoId>/chunk_000.mp4`) from the AWS S3 staging bucket.
+*   **Benefit:** Reduces S3 active storage fees by removing intermediate files as soon as they are no longer required, rather than waiting for the 7-day S3 Lifecycle expiration.
+
+### B. Fast Idle Auto-Shutdown (30-Second Timeout)
+*   **Action:** The worker polls the SQS FIFO queue. If the queue is empty for **30 seconds** consecutively, the worker triggers `shutdown -h now` on the OS.
+*   **Spot Instance Termination:** Since Spot Instances cannot be "stopped," AWS immediately transitions the instance state to `terminated` when the OS shuts down.
+*   **Benefit:** Eliminates idle instance billing. Compute costs stop automatically within ~30-50 seconds of completing all transcoding tasks.
+
+### C. Developer SSH Diagnostics
+*   **KeyPair Association:** Trigger Lambda passes the KeyPair name `us-debian-oed` (`key-0816459a17b6bf1c1`) during `RunInstances` execution.
+*   **Security Group:** Automatic creation of security group `oedulms-video-worker-sg` in the default VPC which opens port `22` (SSH) inbound from anywhere.
+*   **Helper Log Script:** A diagnostics helper script `show-logs.sh` is packaged and extracted to `/app/show-logs.sh` on the instance. Running `sudo /app/show-logs.sh` tails system boot logs or worker progress live.
+
+### D. Robust Callback Parsing
+*   The callback Lambda function automatically unpacks nested body payloads, seamlessly supporting both wrapped (`{ event: payload }`) and raw JSON payloads.
+
+### E. YouTube Video Direct Processing
+*   **Action:** When the trigger payload contains a YouTube video URL (matching `youtube.com` or `youtu.be` patterns), the worker bypasses S3 downloads. It invokes `yt-dlp` to download the best MP4 audio/video streams, merges them into a temporary local file, and then uses the exact same stream-copy splitting and R2 HLS transcoding pipeline.
+*   **System Setup:** `yt-dlp` is automatically installed on boot on clean Debian 12 base AMIs via the EC2 UserData bootstrap script.

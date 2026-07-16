@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
-import { createPipelineSql, getVideoState } from "./pipeline-db";
+import { createPipelineSql, getVideoState, ensureTable } from "./pipeline-db";
 
 /**
  * Lambda: Status handler
@@ -18,6 +18,7 @@ export const statusHandler = async (
   }
 
   const sql = createPipelineSql();
+  await ensureTable(sql);
   const state = await getVideoState(sql, videoId);
 
   if (!state) {

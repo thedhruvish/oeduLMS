@@ -82,6 +82,16 @@ export const handleEncodeChunkTask = async (task: EncodeChunkTask): Promise<void
       totalChunks,
       qualities,
     });
+
+    // ── 5. Delete raw chunk from S3 to save space ─────────────────────────
+    try {
+      const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+      const { s3 } = await import("./storage");
+      console.log(`[encode] chunk ${chunkIndex} | Deleting raw chunk s3://${bucket}/${chunkS3Key}`);
+      await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: chunkS3Key }));
+    } catch (err) {
+      console.error(`[encode] Failed to delete raw chunk s3://${bucket}/${chunkS3Key}:`, err);
+    }
   } finally {
     await cleanupDir(tempDir);
   }

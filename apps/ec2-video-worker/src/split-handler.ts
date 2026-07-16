@@ -1,5 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
+import { exec } from "child_process";
+import { promisify } from "util";
 import { type SplitTask } from "./types";
 import {
   downloadFromS3,
@@ -10,6 +12,15 @@ import {
   cleanupDir,
 } from "./storage";
 import { splitVideoIntoChunks } from "./ffmpeg";
+
+const execAsync = promisify(exec);
+
+async function downloadFromYouTube(url: string, localPath: string): Promise<void> {
+  console.log(`[split] Downloading YouTube video using yt-dlp: ${url}`);
+  await execAsync(
+    `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-playlist "${url}" -o "${localPath}"`
+  );
+}
 
 /**
  * Handle a SPLIT task:
@@ -42,12 +53,18 @@ export const handleSplitTask = async (
 
   try {
     // ── 1. Download ────────────────────────────────────────────────────────
-    const { bucket, key } = parseS3Url(sourceS3Url);
-    console.log(`[split] Downloading s3://${bucket}/${key}`);
-    await downloadFromS3(bucket, key, localVideoPath, (pct) => {
-      if (pct % 10 < 0.5) process.stdout.write(`\r[split] Download ${pct.toFixed(0)}%`);
-    });
-    process.stdout.write("\n");
+    const isYouTube = sourceS3Url.startsWith("http") && (sourceS3Url.includes("youtube.com") || sourceS3Url.includes("youtu.be"));
+
+    if (isYouTube) {
+      await downloadFromYouTube(sourceS3Url, localVideoPath);
+    } else {
+      const { bucket, key } = parseS3Url(sourceS3Url);
+      console.log(`[split] Downloading s3://${bucket}/${key}`);
+      await downloadFromS3(bucket, key, localVideoPath, (pct) => {
+        if (pct % 10 < 0.5) process.stdout.write(`\r[split] Download ${pct.toFixed(0)}%`);
+      });
+      process.stdout.write("\n");
+    }
 
     // ── 2. Split ───────────────────────────────────────────────────────────
     const chunksDir = path.join(tempDir, "chunks");

@@ -7,6 +7,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as events from "aws-cdk-lib/aws-events";
 import * as targets from "aws-cdk-lib/aws-events-targets";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 
 export interface VideoPipelineProps extends cdk.StackProps {
   r2Bucket: string;
@@ -87,7 +88,21 @@ export class VideoPipelineStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
-    // ── 4. (No DynamoDB) — chunk tracking lives in pipeline Neon DB ─────────
+    // ── 4. Lookup Default VPC and Create Worker Security Group ──────────────
+    const defaultVpc = ec2.Vpc.fromLookup(this, "DefaultVpc", { isDefault: true });
+
+    const workerSecurityGroup = new ec2.SecurityGroup(this, "WorkerSecurityGroup", {
+      vpc: defaultVpc,
+      description: "Allow SSH inbound and all outbound traffic for video worker",
+      allowAllOutbound: true,
+      securityGroupName: "oedulms-video-worker-sg",
+    });
+
+    workerSecurityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(22),
+      "Allow SSH access from anywhere"
+    );
 
     // ── 5. IAM Role for EC2 Spot Instances ───────────────────────────────────
     const ec2Role = new iam.Role(this, "VideoWorkerRole", {
@@ -129,6 +144,7 @@ export class VideoPipelineStack extends cdk.Stack {
           "ec2:RunInstances",
           "ec2:DescribeInstances",
           "ec2:DescribeSpotPriceHistory",
+          "ec2:CreateTags",
           "iam:PassRole",
         ],
         resources: ["*"],
@@ -137,7 +153,7 @@ export class VideoPipelineStack extends cdk.Stack {
 
     videoQueue.grantSendMessages(lambdaRole);
     videoQueue.grantConsumeMessages(lambdaRole);
-    stateTable.grantReadWriteData(lambdaRole);
+    // stateTable.grantReadWriteData(lambdaRole);
     workerAssetsBucket.grantRead(lambdaRole);
 
     // ── 7. Shared Lambda environment ─────────────────────────────────────────
@@ -148,11 +164,15 @@ export class VideoPipelineStack extends cdk.Stack {
       INSTANCE_PROFILE_ARN: ec2InstanceProfile.attrArn,
       AMI_ID: props.amiId,
       R2_ACCOUNT_ID: props.r2AccountId,
+      R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID ?? "",
+      R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY ?? "",
       R2_BUCKET: props.r2Bucket,
       R2_SECRET_NAME: props.r2SecretName,
       CF_WORKER_CALLBACK_URL: props.cfWorkerCallbackUrl,
       PIPELINE_SECRET: props.pipelineSecret,
       PIPELINE_DATABASE_URL: props.pipelineDatabaseUrl,
+      KEY_PAIR_NAME: props.keyPairName ?? "",
+      SECURITY_GROUP_ID: workerSecurityGroup.securityGroupId,
     };
 
     // ── 8. Lambda: Trigger ────────────────────────────────────────────────────
@@ -261,7 +281,7 @@ export class VideoPipelineStack extends cdk.Stack {
     usagePlan.addApiKey(apiKey);
 
     // EC2 worker uses the /callback URL — bake it in at deploy time
-    const callbackApiUrl = `${api.url}callback`;
+    const callbackApiUrl = `https://${api.restApiId}.execute-api.${this.region}.amazonaws.com/prod/callback`;
     callbackFn.addEnvironment("LAMBDA_CALLBACK_URL", callbackApiUrl);
     triggerFn.addEnvironment("LAMBDA_CALLBACK_URL", callbackApiUrl);
 

@@ -1,7 +1,7 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import type { Context } from "aws-lambda";
 import type { EC2Event, CFEvent, VideoQuality } from "./types";
-import { createPipelineSql, initVideoState, incrementChunk, setStatus } from "./pipeline-db";
+import { createPipelineSql, initVideoState, incrementChunk, setStatus, ensureTable } from "./pipeline-db";
 
 /**
  * Lambda: Callback handler
@@ -15,19 +15,25 @@ import { createPipelineSql, initVideoState, incrementChunk, setStatus } from "./
  * ERROR                 → write to pipeline DB → forward to CF Worker
  *
  * CF Worker only ever sees: SPLIT_COMPLETE | MASTER_PLAYLIST_READY | ERROR
+ *
  */
 export const callbackHandler = async (
   event: { body: string },
   _ctx: Context
 ): Promise<{ statusCode: number; body: string }> => {
-  let ec2Event: EC2Event;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let bodyObj: any;
   try {
-    ec2Event = JSON.parse(event.body) as EC2Event;
+    bodyObj = JSON.parse(event.body);
   } catch {
     return { statusCode: 400, body: JSON.stringify({ error: "Bad JSON" }) };
   }
+  const ec2Event = (bodyObj.event && typeof bodyObj.event === "object"
+    ? bodyObj.event
+    : bodyObj) as EC2Event;
 
   const sql = createPipelineSql();
+  await ensureTable(sql);
 
   switch (ec2Event.event) {
     // ── SPLIT complete — init DB row, forward to CF Worker ────────────────

@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
-    "package": "npm run build && tar -czf ec2-video-worker.tar.gz dist package.json"
+    "package": "npm run build && tar -czf ec2-video-worker.tar.gz dist package.json show-logs.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1087.0",

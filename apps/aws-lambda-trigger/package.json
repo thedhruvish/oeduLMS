@@ -5,8 +5,8 @@
   "description": "AWS Lambda functions for the video processing pipeline",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "build:zip": "tsc && cd dist && zip -r ../lambda.zip .",
+    "build": "bun build ./src/index.ts --target=node --outdir=./dist --external=@aws-sdk/* --format=cjs",
+    "build:zip": "bun run build && cd dist && zip -r ../lambda.zip .",
     "dev": "tsc -w"
   },
   "dependencies": {

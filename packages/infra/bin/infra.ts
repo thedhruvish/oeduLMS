@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+import * as path from "path";
+import * as dotenv from "dotenv";
+
+// Load .env variables
+dotenv.config({ path: path.join(__dirname, "../.env") });
+
 import * as cdk from "aws-cdk-lib/core";
 import { VideoPipelineStack } from "../lib/videopip-stack";
 
@@ -15,7 +21,7 @@ new VideoPipelineStack(app, "OeduLMSVideoPipeline", {
   r2SecretName: process.env.R2_SECRET_NAME ?? "oedulms/r2-credentials",
   cfWorkerCallbackUrl:
     process.env.CF_WORKER_CALLBACK_URL ??
-    "https://oedulms-server.workers.dev/api/public/video/pipeline-callback",
+    "https://api-protech.dhruvish.in/api/public/video/pipeline-callback",
   pipelineSecret: process.env.PIPELINE_SECRET ?? "change-me-in-production",
   pipelineDatabaseUrl: process.env.PIPELINE_DATABASE_URL ?? "",
   // Replace with your custom AMI containing ffmpeg + Node.js 20

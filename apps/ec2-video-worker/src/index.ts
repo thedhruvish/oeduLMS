@@ -24,6 +24,23 @@ import { type SQSTask } from "./types";
 import { handleSplitTask } from "./split-handler";
 import { handleEncodeChunkTask } from "./encode-handler";
 import { sendCallback } from "./storage";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
+
+async function shutdownInstance(): Promise<void> {
+  console.log(JSON.stringify({ event: "SHUTTING_DOWN_INSTANCE" }));
+  try {
+    await execAsync("sudo shutdown -h now");
+  } catch {
+    try {
+      await execAsync("shutdown -h now");
+    } catch (err) {
+      console.error("Failed to shutdown:", err);
+    }
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config
@@ -109,8 +126,12 @@ async function pollAndProcess(): Promise<void> {
 
   await watchForSpotInterruption();
 
+  let idleTimeMs = 0;
+  const MAX_IDLE_TIME_MS = 30 * 1000; // 30 seconds
+
   while (!isInterrupted) {
     let messages;
+    const startTime = Date.now();
 
     try {
       const resp = await sqs.send(
@@ -130,11 +151,20 @@ async function pollAndProcess(): Promise<void> {
     }
 
     if (messages.length === 0) {
-      // Queue empty — check for interruption signal then loop
       if (isInterrupted) break;
-      console.log("[poll] Queue empty, waiting…");
+      const elapsed = Date.now() - startTime;
+      idleTimeMs += elapsed;
+      console.log(`[poll] Queue empty. Idle for ${(idleTimeMs / 1000).toFixed(0)}s`);
+
+      if (idleTimeMs >= MAX_IDLE_TIME_MS) {
+        await shutdownInstance();
+        break;
+      }
       continue;
     }
+
+    // Reset idle time when message is processed
+    idleTimeMs = 0;
 
     for (const message of messages) {
       if (isInterrupted) {
