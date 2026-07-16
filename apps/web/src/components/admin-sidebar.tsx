@@ -10,6 +10,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 import {
   Sidebar,
@@ -134,13 +135,19 @@ export function AdminSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-2 flex flex-col gap-4">
+      <SidebarFooter className="border-t p-2 flex flex-col gap-2">
         {state === "expanded" && user && (
           <div className="flex flex-col px-2 min-w-0">
             <span className="text-sm font-semibold truncate">{user.name}</span>
             <span className="text-xs text-muted-foreground truncate">{user.email}</span>
           </div>
         )}
+
+        {/* Theme Toggle */}
+        <div className="flex justify-center px-1">
+          <ThemeToggle iconOnly={state === "collapsed"} className="w-full justify-start" />
+        </div>
+
         <SidebarMenuButton
           onClick={handleLogout}
           className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 flex items-center justify-center"

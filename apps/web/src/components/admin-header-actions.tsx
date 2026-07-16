@@ -2,7 +2,7 @@ import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Search,
-  Bell,
+  
   LogOut,
   BookOpen,
   Users,
@@ -12,10 +12,8 @@ import {
 import { toast } from "sonner";
 import { UploadsHeaderIndicator } from "@/components/ui/uploads-header-indicator";
 
-import { Popover, PopoverTrigger, PopoverContent } from "@oedulms/ui/components/popover";
 import { UserProfileDropdown } from "@/components/profile-dropdown";
 import { Button } from "@oedulms/ui/components/button";
-import { ScrollArea } from "@oedulms/ui/components/scroll-area";
 import {
   CommandDialog,
   CommandInput,
@@ -26,6 +24,7 @@ import {
   CommandSeparator,
 } from "@oedulms/ui/components/command";
 import { useLogout } from "@/api/auth";
+import { ThemeToggle } from "./theme-toggle";
 
 export function AdminHeaderActions() {
   const navigate = useNavigate();
@@ -59,27 +58,6 @@ export function AdminHeaderActions() {
     navigate({ to });
   };
 
-  // Mock Notifications
-  const notifications = [
-    {
-      id: "1",
-      title: "New Enrollment",
-      description: "John Doe enrolled in React Basics.",
-      time: "2 hours ago",
-    },
-    {
-      id: "2",
-      title: "Discussion Post",
-      description: "New question in TypeScript Core module.",
-      time: "5 hours ago",
-    },
-    {
-      id: "3",
-      title: "System Update",
-      description: "LMS platform updated successfully.",
-      time: "1 day ago",
-    },
-  ];
 
   return (
     <div className="flex items-center gap-4">
@@ -97,7 +75,7 @@ export function AdminHeaderActions() {
       <UploadsHeaderIndicator />
 
       {/* Notification Bell */}
-      <Popover>
+      {/* <Popover>
         <PopoverTrigger
           render={
             <Button
@@ -132,7 +110,11 @@ export function AdminHeaderActions() {
             </div>
           </ScrollArea>
         </PopoverContent>
-      </Popover>
+      </Popover> */}
+      <div className="flex justify-center px-1">
+          <ThemeToggle 
+           className="w-full justify-start" />
+        </div>
 
       {/* User Profile Avatar Dropdown */}
       <UserProfileDropdown />

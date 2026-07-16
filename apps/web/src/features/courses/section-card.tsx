@@ -1,6 +1,6 @@
 import * as React from "react";
-import { GripVertical, ArrowUp, ArrowDown, Edit, Trash2, Plus, Film } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@oedulms/ui/components/card";
+import { GripVertical, ArrowUp, ArrowDown, Edit, Trash2, Plus, Film, ChevronDown } from "lucide-react";
+import { Card, CardTitle } from "@oedulms/ui/components/card";
 import { Button } from "@oedulms/ui/components/button";
 import { Badge } from "@oedulms/ui/components/badge";
 import { Sortable, SortableItem, SortableItemHandle } from "@oedulms/ui/components/reui/sortable";
@@ -37,6 +37,8 @@ export function SectionCard({
   onMoveLecture,
   onDragEndLecture,
 }: SectionCardProps) {
+  const [isOpen, setIsOpen] = React.useState(true);
+
   const isSectionPublished =
     section.publishMode === "AFTER_TRANSCODE" ||
     (section.publishedAt !== null && new Date(section.publishedAt) <= new Date());
@@ -47,11 +49,29 @@ export function SectionCard({
 
   return (
     <Card className="border bg-card shadow-sm rounded-lg overflow-hidden flex flex-col gap-0 py-0 transition-all duration-200">
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-3 pt-4 px-4 bg-muted/10 gap-3">
+      {/* Clickable Header */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((prev) => !prev)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsOpen((prev) => !prev);
+          }
+        }}
+        className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-3 pt-4 px-4 bg-muted/10 gap-3 cursor-pointer select-none hover:bg-muted/20 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+      >
         <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto">
-          <SortableItemHandle className="text-muted-foreground/60 hover:text-primary transition shrink-0 p-1 rounded hover:bg-muted">
+          {/* Drag handle — stop click propagation so it doesn't toggle */}
+          <SortableItemHandle
+            className="text-muted-foreground/60 hover:text-primary transition shrink-0 p-1 rounded hover:bg-muted"
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          >
             <GripVertical className="size-4" />
           </SortableItemHandle>
+
           <div className="flex flex-col gap-0.5 min-w-0 w-full">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
@@ -70,6 +90,9 @@ export function SectionCard({
                     ? "Scheduled"
                     : "Published"}
               </Badge>
+              <span className="text-[10px] text-muted-foreground ml-auto sm:ml-0">
+                {section.lectures.length} lecture{section.lectures.length !== 1 ? "s" : ""}
+              </span>
             </div>
             <CardTitle className="text-sm font-bold text-foreground truncate max-w-full">
               {section.title}
@@ -82,7 +105,10 @@ export function SectionCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 w-full sm:w-auto justify-end sm:justify-start flex-wrap">
+        <div
+          className="flex items-center gap-1 w-full sm:w-auto justify-end sm:justify-start flex-wrap"
+          onClick={(e) => e.stopPropagation()}
+        >
           <Button
             type="button"
             size="icon"
@@ -134,52 +160,70 @@ export function SectionCard({
           >
             <Trash2 className="size-3.5" />
           </Button>
-        </div>
-      </CardHeader>
 
-      <CardContent className="p-4 flex flex-col gap-3">
-        {section.lectures.length === 0 ? (
-          <div className="text-center py-6 border border-dashed rounded-md bg-muted/5 flex flex-col items-center justify-center gap-1">
-            <Film className="size-6 text-muted-foreground/60" />
-            <span className="text-[11px] font-medium text-muted-foreground">
-              No lectures added yet
-            </span>
+          {/* Expand/Collapse chevron */}
+          <div className="size-7 flex items-center justify-center text-muted-foreground">
+            <ChevronDown
+              className={cn(
+                "size-4 transition-transform duration-300",
+                isOpen ? "rotate-180" : "rotate-0"
+              )}
+            />
           </div>
-        ) : (
-          <Sortable
-            value={section.lectures}
-            onValueChange={(newLectures) => {
-              onDragEndLecture(section.id, newLectures);
-            }}
-            getItemValue={(l) => l.id}
-            strategy="vertical"
-            className="divide-y border rounded-md bg-card overflow-hidden"
-          >
-            {section.lectures.map((lecture, lIndex) => (
-              <SortableItem key={lecture.id} value={lecture.id}>
-                <LectureItem
-                  lecture={lecture}
-                  lIndex={lIndex}
-                  section={section}
-                  onEditLecture={onEditLecture}
-                  onDeleteLecture={onDeleteLecture}
-                  onMoveLecture={onMoveLecture}
-                />
-              </SortableItem>
-            ))}
-          </Sortable>
-        )}
+        </div>
+      </div>
 
-        <Button
-          onClick={() => onAddLecture(section.id)}
-          size="sm"
-          variant="outline"
-          className="w-fit mt-2 border-dashed bg-card"
-        >
-          <Plus className="size-3.5" data-icon="inline-start" />
-          Add Lecture
-        </Button>
-      </CardContent>
+      {/* Collapsible body */}
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-300 ease-in-out",
+          isOpen ? "max-h-[9999px] opacity-100" : "max-h-0 opacity-0"
+        )}
+      >
+        <div className="p-4 flex flex-col gap-3">
+          {section.lectures.length === 0 ? (
+            <div className="text-center py-6 border border-dashed rounded-md bg-muted/5 flex flex-col items-center justify-center gap-1">
+              <Film className="size-6 text-muted-foreground/60" />
+              <span className="text-[11px] font-medium text-muted-foreground">
+                No lectures added yet
+              </span>
+            </div>
+          ) : (
+            <Sortable
+              value={section.lectures}
+              onValueChange={(newLectures) => {
+                onDragEndLecture(section.id, newLectures);
+              }}
+              getItemValue={(l) => l.id}
+              strategy="vertical"
+              className="divide-y border rounded-md bg-card overflow-hidden"
+            >
+              {section.lectures.map((lecture, lIndex) => (
+                <SortableItem key={lecture.id} value={lecture.id}>
+                  <LectureItem
+                    lecture={lecture}
+                    lIndex={lIndex}
+                    section={section}
+                    onEditLecture={onEditLecture}
+                    onDeleteLecture={onDeleteLecture}
+                    onMoveLecture={onMoveLecture}
+                  />
+                </SortableItem>
+              ))}
+            </Sortable>
+          )}
+
+          <Button
+            onClick={() => onAddLecture(section.id)}
+            size="sm"
+            variant="outline"
+            className="w-fit mt-2 border-dashed bg-card"
+          >
+            <Plus className="size-3.5" data-icon="inline-start" />
+            Add Lecture
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 }
