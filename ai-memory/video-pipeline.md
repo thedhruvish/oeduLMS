@@ -166,8 +166,8 @@ To minimize bandwidth and execution costs, Lambda filters events and only forwar
 
 ## 6. Resilience & Spot Interruption Strategy
 
-*   **SQS Visibility Timeout (35 Min)**: The message stays hidden while the worker executes. If a spot instance is terminated abruptly, the message automatically re-appears in SQS and is consumed by a replacement instance.
-*   **Delete-Only-On-Success**: The EC2 worker only deletes the SQS message after completing the uploads. A failure halfway means the task restarts cleanly.
+*   **SQS Visibility Timeout (35 Min)**: The message stays hidden while the worker executes. If a spot instance is terminated abruptly or loses power, the message automatically re-appears in SQS and is consumed by a replacement instance.
+*   **Delete-on-Success & Error-Cleanup**: The EC2 worker deletes the SQS message after completing the uploads. If a caught application/task execution failure occurs, the worker sends an error callback and immediately deletes the message from SQS. This prevents failed tasks from repeatedly locking the SQS FIFO Message Group for the duration of the visibility timeout.
 *   **Worker Heartbeat**: Long-running workers periodically extend the message visibility timeout via `ChangeMessageVisibilityCommand` if a task is taking longer than expected.
 *   **Spot Interruption Warnings**: EventBridge triggers the `spotInterruptionHandler` Lambda when AWS broadcasts the 2-minute instance termination warning. Additionally, the worker polls the local EC2 metadata service (`http://169.254.169.254`) every 5 seconds to gracefully stop pulling new tasks and flush log events before termination.
 *   **Dead-Letter Queue (DLQ)**: SQS drops failing tasks into a DLQ after 3 failed processing attempts to prevent infinite retry loops.
@@ -223,6 +223,17 @@ To reduce storage costs, eliminate idle compute charges, and improve developer d
 ### D. Robust Callback Parsing
 *   The callback Lambda function automatically unpacks nested body payloads, seamlessly supporting both wrapped (`{ event: payload }`) and raw JSON payloads.
 
-### E. YouTube Video Direct Processing
-*   **Action:** When the trigger payload contains a YouTube video URL (matching `youtube.com` or `youtu.be` patterns), the worker bypasses S3 downloads. It invokes `yt-dlp` to download the best MP4 audio/video streams, merges them into a temporary local file, and then uses the exact same stream-copy splitting and R2 HLS transcoding pipeline.
+### E. YouTube Video & Generic HTTP Video Direct Processing
+*   **Action:** When the trigger payload contains a YouTube video URL (matching `youtube.com` or `youtu.be` patterns), the worker bypasses S3 downloads. It invokes `yt-dlp` with iOS client spoofing and optional cookie fallbacks (`cookies.txt` pulled from S3 worker assets bucket) to download the best MP4 audio/video streams, merges them into a temporary local file, and transcodes them.
+*   **Generic HTTP/HTTPS Downloads:** If the input URL is a direct HTTP/HTTPS URL (e.g. `https://protech-assets.dhruvish.in/...`), it is downloaded directly using `curl` rather than treating it as an `s3://` URL, preventing invalid protocol parser errors.
 *   **System Setup:** `yt-dlp` is automatically installed on boot on clean Debian 12 base AMIs via the EC2 UserData bootstrap script.
+
+### F. SQS FIFO Deduplication Protection (`runId`)
+*   **Action:** To prevent SQS FIFO from silently discarding manually re-triggered transcode messages within its 5-minute deduplication window, every triggered pipeline run is assigned a unique `runId` (e.g. timestamp + random string). All SQS message deduplication IDs (both for splitting and encoding tasks) incorporate this `runId`.
+
+### G. Manual Re-Trigger Endpoint
+*   **Route:** `POST /api/admin/video/re-trigger`
+*   **Action:** Queries the existing lecture metadata by ID, resets the database video state to `SPLITTING`, and sends a new message to SQS using a fresh `runId` to trigger processing.
+
+### H. Worker S3 Log Persistence
+*   **Action:** The worker dynamically resolves its EC2 instance ID on boot. It uploads its processing logs (`/var/log/video-worker.log`) to the S3 staging bucket under `logs/<instanceId>/worker.log` every 60 seconds and performs a final blocking flush during instance shutdown.

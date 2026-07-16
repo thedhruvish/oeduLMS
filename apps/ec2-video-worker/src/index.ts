@@ -20,17 +20,109 @@ import {
   DeleteMessageCommand,
   ChangeMessageVisibilityCommand,
 } from "@aws-sdk/client-sqs";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { type SQSTask } from "./types";
 import { handleSplitTask } from "./split-handler";
 import { handleEncodeChunkTask } from "./encode-handler";
 import { sendCallback } from "./storage";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { readFile } from "fs/promises";
+import { existsSync } from "fs";
 
 const execAsync = promisify(exec);
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Config
+// ─────────────────────────────────────────────────────────────────────────────
+
+const QUEUE_URL = process.env.QUEUE_URL!;
+const REGION = process.env.S3_REGION ?? "us-east-1";
+const CHUNK_DURATION_SECONDS = parseInt(process.env.CHUNK_DURATION_SECONDS ?? "480", 10);
+const STAGING_BUCKET = process.env.S3_BUCKET ?? "oedulms-video-staging-379929762145";
+const LOG_FILE = "/var/log/video-worker.log";
+const LOG_UPLOAD_INTERVAL_MS = 60 * 1000; // upload every 60 seconds
+
+// SQS visibility timeout must be longer than the longest task
+const VISIBILITY_TIMEOUT_SECONDS = 35 * 60; // 35 minutes
+
+const sqs = new SQSClient({ region: REGION });
+const s3 = new S3Client({ region: REGION });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EC2 instance identity
+// ─────────────────────────────────────────────────────────────────────────────
+
+let instanceId = process.env.INSTANCE_ID ?? "unknown";
+
+async function resolveInstanceId(): Promise<void> {
+  try {
+    // Try IMDSv2 first (requires a token)
+    const tokenResp = await fetch("http://169.254.169.254/latest/api/token", {
+      method: "PUT",
+      headers: { "X-aws-ec2-metadata-token-ttl-seconds": "60" },
+      signal: AbortSignal.timeout(2000),
+    });
+    const token = tokenResp.ok ? await tokenResp.text() : null;
+    const headers: Record<string, string> = token
+      ? { "X-aws-ec2-metadata-token": token }
+      : {};
+
+    const idResp = await fetch(
+      "http://169.254.169.254/latest/meta-data/instance-id",
+      { headers, signal: AbortSignal.timeout(2000) }
+    );
+    if (idResp.ok) {
+      instanceId = (await idResp.text()).trim();
+      console.log(JSON.stringify({ event: "INSTANCE_ID_RESOLVED", instanceId }));
+    }
+  } catch {
+    // fallback: already set via env var or "unknown"
+    console.warn("[s3-log] Could not resolve instance-id from metadata, using:", instanceId);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// S3 log uploader
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function uploadLogToS3(): Promise<void> {
+  if (!existsSync(LOG_FILE)) return;
+  try {
+    const content = await readFile(LOG_FILE);
+    const s3Key = `logs/${instanceId}/worker.log`;
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: STAGING_BUCKET,
+        Key: s3Key,
+        Body: content,
+        ContentType: "text/plain",
+        Metadata: {
+          instanceId,
+          uploadedAt: new Date().toISOString(),
+        },
+      })
+    );
+    console.log(JSON.stringify({ event: "LOG_UPLOADED", bucket: STAGING_BUCKET, key: s3Key }));
+  } catch (err) {
+    console.error("[s3-log] Failed to upload log to S3:", err instanceof Error ? err.message : err);
+  }
+}
+
+function startLogUploader(): ReturnType<typeof setInterval> {
+  return setInterval(() => {
+    uploadLogToS3().catch(() => { /* silent – don't crash worker on log failure */ });
+  }, LOG_UPLOAD_INTERVAL_MS);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shutdown helper
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function shutdownInstance(): Promise<void> {
   console.log(JSON.stringify({ event: "SHUTTING_DOWN_INSTANCE" }));
+  // Final log upload before the instance is gone
+  await uploadLogToS3();
   try {
     await execAsync("sudo shutdown -h now");
   } catch {
@@ -42,22 +134,6 @@ async function shutdownInstance(): Promise<void> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Config
-// ─────────────────────────────────────────────────────────────────────────────
-
-const QUEUE_URL = process.env.QUEUE_URL!;
-const REGION = process.env.S3_REGION ?? "us-east-1";
-const CHUNK_DURATION_SECONDS = parseInt(process.env.CHUNK_DURATION_SECONDS ?? "480", 10);
-
-// SQS visibility timeout must be longer than the longest task
-// SPLIT can take up to 20 min for a large video; ENCODE is capped by chunk size
-const VISIBILITY_TIMEOUT_SECONDS = 35 * 60; // 35 minutes
-
-const sqs = new SQSClient({ region: REGION });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Spot interruption watch
 // ─────────────────────────────────────────────────────────────────────────────
 
 let isInterrupted = false;
@@ -123,6 +199,9 @@ async function pollAndProcess(): Promise<void> {
       chunkDurationSeconds: CHUNK_DURATION_SECONDS,
     })
   );
+
+  await resolveInstanceId();
+  const logUploader = startLogUploader();
 
   await watchForSpotInterruption();
 
@@ -237,8 +316,9 @@ async function pollAndProcess(): Promise<void> {
           chunkIndex: task.taskType === "ENCODE_CHUNK" ? task.chunkIndex : undefined,
         });
 
-        // Do NOT delete the message — it will re-surface after visibility timeout
-        // and another instance (or this one) will retry it.
+        // Delete the message so it doesn't lock the SQS FIFO Message Group for 35 min.
+        // Re-triggers are handled manually or cleanly without queue lockups.
+        await deleteMessage(receiptHandle);
       }
 
       clearInterval(heartbeat);
@@ -251,6 +331,8 @@ async function pollAndProcess(): Promise<void> {
       reason: isInterrupted ? "spot-interrupted" : "queue-empty",
     })
   );
+  clearInterval(logUploader);
+  await uploadLogToS3();
   process.exit(0);
 }
 

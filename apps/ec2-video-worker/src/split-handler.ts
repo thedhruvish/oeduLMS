@@ -63,15 +63,23 @@ export const handleSplitTask = async (
     // ── 1. Download ────────────────────────────────────────────────────────
     const isYouTube = sourceS3Url.startsWith("http") && (sourceS3Url.includes("youtube.com") || sourceS3Url.includes("youtu.be"));
 
-    if (isYouTube) {
-      await downloadFromYouTube(sourceS3Url, localVideoPath);
-    } else {
+    if (sourceS3Url.startsWith("s3://")) {
       const { bucket, key } = parseS3Url(sourceS3Url);
       console.log(`[split] Downloading s3://${bucket}/${key}`);
       await downloadFromS3(bucket, key, localVideoPath, (pct) => {
         if (pct % 10 < 0.5) process.stdout.write(`\r[split] Download ${pct.toFixed(0)}%`);
       });
       process.stdout.write("\n");
+    } else if (isYouTube) {
+      await downloadFromYouTube(sourceS3Url, localVideoPath);
+    } else if (sourceS3Url.startsWith("http://") || sourceS3Url.startsWith("https://")) {
+      console.log(`[split] Downloading HTTP URL: ${sourceS3Url}`);
+      const { exec } = await import("child_process");
+      const { promisify } = await import("util");
+      const execAsync = promisify(exec);
+      await execAsync(`curl -L -f -sS -o "${localVideoPath}" "${sourceS3Url}"`);
+    } else {
+      throw new Error(`Unsupported source URL protocol: ${sourceS3Url}`);
     }
 
     // ── 2. Split ───────────────────────────────────────────────────────────

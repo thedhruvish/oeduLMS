@@ -18,7 +18,7 @@ export const ensureTable = async (sql: NeonQueryFunction<false, false>): Promise
   await sql`
     CREATE TABLE IF NOT EXISTS video_pipeline_state (
       video_id          TEXT        PRIMARY KEY,
-      status            TEXT        NOT NULL DEFAULT 'SPLITTING',
+      status            TEXT        NOT NULL DEFAULT 'IDLE',
       duration_seconds  INTEGER,
       total_chunks      INTEGER,
       completed_chunks  INTEGER     NOT NULL DEFAULT 0,
