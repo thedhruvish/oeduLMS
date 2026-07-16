@@ -89,8 +89,9 @@ videoCallbackRouter.post(
 
       case "MASTER_PLAYLIST_READY": {
         const domain = c.env.R2_PUBLIC_DOMAIN ?? "";
-        const masterUrl = domain
-          ? `https://${domain}/${ev.masterPlaylistR2Key}`
+        const domainClean = domain.replace(/^https?:\/\//, "");
+        const masterUrl = domainClean
+          ? `https://${domainClean}/${ev.masterPlaylistR2Key}`
           : ev.masterPlaylistR2Key;
 
         // 1. Update transcoding status DB

@@ -149,11 +149,15 @@ export const sendCallback = async (payload: object): Promise<void> => {
   if (!callbackUrl) return;
 
   try {
-    await fetch(callbackUrl, {
+    const res = await fetch(callbackUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ event: payload }),
     });
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn(`[callback] Non-2xx response from ${callbackUrl}: ${res.status} ${res.statusText} - ${text}`);
+    }
   } catch (err) {
     console.error("[callback] Failed to send:", err);
   }

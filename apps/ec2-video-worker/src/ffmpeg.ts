@@ -139,11 +139,18 @@ export const encodeChunkToHLS = async (
       ])
       .output(playlistPath)
       .on("start", (cmd) => console.log(`[ffmpeg] ${quality}p → ${cmd}`))
-      .on("progress", (p) =>
-        process.stdout.write(`\r[ffmpeg] ${quality}p ${p.percent?.toFixed(1) ?? 0}%`)
-      )
+      .on("progress", (() => {
+        let lastLoggedPct = -20;
+        return (p: { percent?: number }) => {
+          const pct = p.percent ?? 0;
+          const rounded = Math.floor(pct / 20) * 20;
+          if (rounded >= lastLoggedPct + 20) {
+            console.log(`[ffmpeg] ${quality}p progress: ${rounded}%`);
+            lastLoggedPct = rounded;
+          }
+        };
+      })())
       .on("end", () => {
-        process.stdout.write("\n");
         resolve();
       })
       .on("error", reject)

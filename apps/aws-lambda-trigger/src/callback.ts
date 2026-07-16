@@ -1,7 +1,8 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import type { Context } from "aws-lambda";
 import type { EC2Event, CFEvent, VideoQuality } from "./types";
 import { createPipelineSql, initVideoState, incrementChunk, setStatus, ensureTable } from "./pipeline-db";
+import { Readable } from "stream";
 
 /**
  * Lambda: Callback handler
@@ -21,16 +22,16 @@ export const callbackHandler = async (
   event: { body: string },
   _ctx: Context
 ): Promise<{ statusCode: number; body: string }> => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let bodyObj: any;
+  let bodyObj: unknown;
   try {
     bodyObj = JSON.parse(event.body);
   } catch {
     return { statusCode: 400, body: JSON.stringify({ error: "Bad JSON" }) };
   }
-  const ec2Event = (bodyObj.event && typeof bodyObj.event === "object"
-    ? bodyObj.event
-    : bodyObj) as EC2Event;
+  const bodyRecord = bodyObj as Record<string, unknown> | null;
+  const ec2Event = (bodyRecord && bodyRecord.event && typeof bodyRecord.event === "object"
+    ? bodyRecord.event
+    : bodyRecord) as unknown as EC2Event;
 
   const sql = createPipelineSql();
   await ensureTable(sql);
@@ -177,6 +178,21 @@ const RESOLUTION_MAP: Record<number, string> = {
   4320: "7680x4320",
 };
 
+async function readR2File(client: S3Client, bucket: string, key: string): Promise<string> {
+  const resp = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  if (!resp.Body) return "";
+  if (typeof resp.Body.transformToString === "function") {
+    return await resp.Body.transformToString();
+  }
+  const stream = resp.Body as Readable;
+  return new Promise((resolve, reject) => {
+    const chunks: Uint8Array[] = [];
+    stream.on("data", (chunk: Uint8Array) => chunks.push(chunk));
+    stream.on("error", reject);
+    stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+  });
+}
+
 async function buildMasterPlaylist(
   videoId: string,
   qualities: VideoQuality[],
@@ -191,20 +207,64 @@ async function buildMasterPlaylist(
     },
   });
 
-  // Per-quality stitched playlist (concatenates all chunks)
+  // Per-quality stitched playlist (concatenates all chunks' actual TS segments)
   for (const q of qualities) {
-    const lines = ["#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-PLAYLIST-TYPE:VOD"];
+    const stitchedLines: string[] = [];
+    let maxTargetDuration = 4;
+
     for (let i = 0; i < totalChunks; i++) {
-      // Reference each chunk's variant playlist
-      lines.push(`../chunks/chunk_${String(i).padStart(3, "0")}/h${q}/playlist.m3u8`);
+      const chunkDirName = `chunk_${String(i).padStart(3, "0")}`;
+      const chunkKey = `videos/${videoId}/chunks/${chunkDirName}/h${q}/playlist.m3u8`;
+
+      try {
+        const playlistContent = await readR2File(r2, process.env.R2_BUCKET!, chunkKey);
+        const lines = playlistContent.split(/\r?\n/);
+
+        for (let j = 0; j < lines.length; j++) {
+          const line = lines[j].trim();
+          if (!line) continue;
+
+          if (line.startsWith("#EXT-X-TARGETDURATION:")) {
+            const duration = parseInt(line.split(":")[1], 10);
+            if (!isNaN(duration) && duration > maxTargetDuration) {
+              maxTargetDuration = duration;
+            }
+          } else if (line.startsWith("#EXTINF:")) {
+            stitchedLines.push(line);
+            // Read next non-empty line (segment filename)
+            let nextLine = "";
+            while (j + 1 < lines.length) {
+              j++;
+              nextLine = lines[j].trim();
+              if (nextLine) break;
+            }
+            if (nextLine && !nextLine.startsWith("#")) {
+              stitchedLines.push(`../chunks/${chunkDirName}/h${q}/${nextLine}`);
+            } else {
+              stitchedLines.push(nextLine);
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to read chunk playlist ${chunkKey}:`, err);
+      }
     }
-    lines.push("#EXT-X-ENDLIST");
+
+    const playlistBody = [
+      "#EXTM3U",
+      "#EXT-X-VERSION:3",
+      `#EXT-X-TARGETDURATION:${maxTargetDuration}`,
+      "#EXT-X-MEDIA-SEQUENCE:0",
+      "#EXT-X-PLAYLIST-TYPE:VOD",
+      ...stitchedLines,
+      "#EXT-X-ENDLIST"
+    ].join("\n");
 
     await r2.send(
       new PutObjectCommand({
         Bucket: process.env.R2_BUCKET!,
         Key: `videos/${videoId}/h${q}/playlist.m3u8`,
-        Body: lines.join("\n"),
+        Body: playlistBody,
         ContentType: "application/vnd.apple.mpegurl",
       })
     );
@@ -234,7 +294,9 @@ async function buildMasterPlaylist(
 
 function buildPublicUrl(r2Key: string): string {
   const domain = process.env.R2_PUBLIC_DOMAIN;
-  return domain ? `https://${domain}/${r2Key}` : r2Key;
+  if (!domain) return r2Key;
+  const domainClean = domain.replace(/^https?:\/\//, "");
+  return `https://${domainClean}/${r2Key}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

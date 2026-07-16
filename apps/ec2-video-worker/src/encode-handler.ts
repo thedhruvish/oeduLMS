@@ -9,21 +9,15 @@ import {
   createTempDir,
   cleanupDir,
 } from "./storage";
-import { encodeChunkAllQualities, type EncodeResult } from "./ffmpeg";
+import { type EncodeResult } from "./ffmpeg";
 
 /**
  * Handle an ENCODE_CHUNK task:
- * 1. Download the raw chunk from S3
- * 2. Encode to all requested qualities → 4-second HLS segments
- * 3. For each quality variant: upload .ts segments + playlist.m3u8 to R2
+ * 1. Check if chunk already exists locally (from split phase cache)
+ * 2. Download from S3 if missing (throttling log to 20% increments)
+ * 3. Encode to qualities concurrently (limit 2) and pipeline variant uploads to R2 in the background
  * 4. Send CHUNK_ENCODE_COMPLETE callback to Lambda
- *
- * R2 path layout:
- *   videos/<videoId>/chunks/chunk_<N>/h<quality>/
- *     segment_0000.ts
- *     segment_0001.ts
- *     …
- *     playlist.m3u8
+ * 5. Clean up both local raw chunk file and raw chunk file in S3 staging bucket
  */
 export const handleEncodeChunkTask = async (task: EncodeChunkTask): Promise<void> => {
   const { videoId, chunkS3Key, chunkIndex, totalChunks, qualities, hlsSegmentDuration } = task;
@@ -42,39 +36,79 @@ export const handleEncodeChunkTask = async (task: EncodeChunkTask): Promise<void
     })
   );
 
+  const localChunksDir = `/tmp/chunks/${videoId}`;
+  await fs.mkdir(localChunksDir, { recursive: true });
+  const localChunkPath = path.join(localChunksDir, `chunk_${chunkStr}.mp4`);
+
   const tempDir = await createTempDir();
-  const localChunkPath = path.join(tempDir, "chunk.mp4");
   const encodeOutputDir = path.join(tempDir, "encoded");
   await fs.mkdir(encodeOutputDir, { recursive: true });
 
   try {
-    // ── 1. Download chunk from S3 ─────────────────────────────────────────
+    // ── 1. Check Local Cache / Download raw chunk ─────────────────────────
+    const chunkExists = await fs.access(localChunkPath).then(() => true).catch(() => false);
     const bucket = process.env.S3_BUCKET!;
-    console.log(`[encode] chunk ${chunkIndex} | Downloading s3://${bucket}/${chunkS3Key}`);
-    await downloadFromS3(bucket, chunkS3Key, localChunkPath, (pct) => {
-      if (pct % 20 < 1)
-        process.stdout.write(`\r[encode] chunk ${chunkIndex} download ${pct.toFixed(0)}%`);
-    });
-    process.stdout.write("\n");
 
-    // ── 2. Encode all qualities ───────────────────────────────────────────
-    console.log(`[encode] chunk ${chunkIndex} | Encoding ${qualities.join(",")}p`);
-    const results = await encodeChunkAllQualities(
-      localChunkPath,
-      encodeOutputDir,
-      qualities,
-      hlsSegmentDuration,
-      2 // concurrency: 2 simultaneous ffmpeg on c5.2xlarge
-    );
-
-    // ── 3. Upload to R2 ───────────────────────────────────────────────────
-    for (const result of results) {
-      await uploadVariantToR2(result, r2BasePath);
+    if (chunkExists) {
+      console.log(`[encode] chunk ${chunkIndex} | Found cached local chunk at ${localChunkPath}`);
+    } else {
+      console.log(`[encode] chunk ${chunkIndex} | Downloading s3://${bucket}/${chunkS3Key}`);
+      let lastLoggedPct = -20;
+      await downloadFromS3(bucket, chunkS3Key, localChunkPath, (pct) => {
+        const rounded = Math.floor(pct / 20) * 20;
+        if (rounded >= lastLoggedPct + 20) {
+          console.log(`[encode] chunk ${chunkIndex} | Download progress: ${rounded}%`);
+          lastLoggedPct = rounded;
+        }
+      });
     }
 
+    // ── 2. Encode and Upload in a pipelined fashion ───────────────────────
+    console.log(`[encode] chunk ${chunkIndex} | Encoding ${qualities.join(",")}p with pipelined upload`);
+    
+    const uploadPromises: Promise<void>[] = [];
+    const concurrency = 2;
+    const activeEncodes: Promise<void>[] = [];
+
+    for (const q of qualities) {
+      // If we hit CPU concurrency limit, wait for one of the encodes to finish
+      if (activeEncodes.length >= concurrency) {
+        await Promise.race(activeEncodes);
+      }
+
+      // Start encoding this quality
+      const encodePromise = (async () => {
+        const { encodeChunkToHLS } = await import("./ffmpeg");
+        const result = await encodeChunkToHLS(localChunkPath, encodeOutputDir, q, hlsSegmentDuration);
+
+        // Pipelined background upload as soon as this quality completes encoding
+        const uploadPromise = (async () => {
+          console.log(`[encode] chunk ${chunkIndex} | Starting background upload of ${q}p`);
+          await uploadVariantToR2(result, r2BasePath);
+          console.log(`[encode] chunk ${chunkIndex} | Finished background upload of ${q}p`);
+        })();
+        uploadPromises.push(uploadPromise);
+      })();
+
+      activeEncodes.push(encodePromise);
+
+      // Remove completed encode promise from the active list
+      encodePromise.then(() => {
+        const idx = activeEncodes.indexOf(encodePromise);
+        if (idx !== -1) activeEncodes.splice(idx, 1);
+      });
+    }
+
+    // Wait for all encoding processes to finish
+    await Promise.all(activeEncodes);
+    console.log(`[encode] chunk ${chunkIndex} | All qualities encoded. Waiting for background uploads to complete...`);
+
+    // Wait for all background uploads to finish
+    await Promise.all(uploadPromises);
+    console.log(`[encode] chunk ${chunkIndex} | All uploads complete!`);
     console.log(JSON.stringify({ step: "ENCODE_DONE", videoId, chunkIndex, qualities }));
 
-    // ── 4. Callback ───────────────────────────────────────────────────────
+    // ── 3. Callback ───────────────────────────────────────────────────────
     await sendCallback({
       event: "CHUNK_ENCODE_COMPLETE",
       videoId,
@@ -82,6 +116,14 @@ export const handleEncodeChunkTask = async (task: EncodeChunkTask): Promise<void
       totalChunks,
       qualities,
     });
+
+    // ── 4. Delete local raw chunk file to free up space ───────────────────
+    try {
+      await fs.rm(localChunkPath, { force: true });
+      console.log(`[encode] chunk ${chunkIndex} | Cleaned up local raw chunk at ${localChunkPath}`);
+    } catch (err) {
+      console.error(`[encode] Failed to delete local raw chunk:`, err);
+    }
 
     // ── 5. Delete raw chunk from S3 to save space ─────────────────────────
     try {

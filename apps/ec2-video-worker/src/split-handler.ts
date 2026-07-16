@@ -66,10 +66,14 @@ export const handleSplitTask = async (
     if (sourceS3Url.startsWith("s3://")) {
       const { bucket, key } = parseS3Url(sourceS3Url);
       console.log(`[split] Downloading s3://${bucket}/${key}`);
+      let lastLoggedPct = -20;
       await downloadFromS3(bucket, key, localVideoPath, (pct) => {
-        if (pct % 10 < 0.5) process.stdout.write(`\r[split] Download ${pct.toFixed(0)}%`);
+        const rounded = Math.floor(pct / 20) * 20;
+        if (rounded >= lastLoggedPct + 20) {
+          console.log(`[split] Download progress: ${rounded}%`);
+          lastLoggedPct = rounded;
+        }
       });
-      process.stdout.write("\n");
     } else if (isYouTube) {
       await downloadFromYouTube(sourceS3Url, localVideoPath);
     } else if (sourceS3Url.startsWith("http://") || sourceS3Url.startsWith("https://")) {
@@ -82,8 +86,8 @@ export const handleSplitTask = async (
       throw new Error(`Unsupported source URL protocol: ${sourceS3Url}`);
     }
 
-    // ── 2. Split ───────────────────────────────────────────────────────────
-    const chunksDir = path.join(tempDir, "chunks");
+    // ── 2. Split (Write to a findable global cache directory) ───────────────
+    const chunksDir = `/tmp/chunks/${videoId}`;
     await fs.mkdir(chunksDir, { recursive: true });
 
     const splitResult = await splitVideoIntoChunks(localVideoPath, chunksDir, chunkDurationSeconds);
@@ -97,19 +101,23 @@ export const handleSplitTask = async (
       })
     );
 
-    // ── 3. Upload chunks to S3 ─────────────────────────────────────────────
+    // ── 3. Upload chunks to S3 (concurrently) ───────────────────────────────
     const s3Bucket = process.env.S3_BUCKET!;
     const chunkS3Keys: string[] = [];
 
-    for (let i = 0; i < splitResult.chunkPaths.length; i++) {
-      const chunkPath = splitResult.chunkPaths[i];
+    console.log(`[split] Starting parallel upload of ${splitResult.totalChunks} chunks to S3...`);
+    const uploadPromises = splitResult.chunkPaths.map(async (chunkPath, i) => {
       const chunkKey = `chunks/${videoId}/chunk_${String(i).padStart(3, "0")}.mp4`;
-      console.log(
-        `[split] Uploading chunk ${i + 1}/${splitResult.totalChunks} → s3://${s3Bucket}/${chunkKey}`
-      );
       await uploadToS3(chunkPath, s3Bucket, chunkKey);
-      chunkS3Keys.push(chunkKey);
+      return { index: i, key: chunkKey };
+    });
+
+    const uploadResults = await Promise.all(uploadPromises);
+    uploadResults.sort((a, b) => a.index - b.index);
+    for (const res of uploadResults) {
+      chunkS3Keys.push(res.key);
     }
+    console.log(`[split] Finished parallel upload of all chunks to S3.`);
 
     // ── 4. Enqueue ENCODE_CHUNK tasks on SQS ──────────────────────────────
     const { SQSClient, SendMessageCommand } = await import("@aws-sdk/client-sqs");
@@ -146,8 +154,36 @@ export const handleSplitTask = async (
       videoId,
       durationSeconds: splitResult.durationSeconds,
       totalChunks: splitResult.totalChunks,
+      qualities,
       chunkDurationSec: chunkDurationSeconds,
     });
+
+    // ── 6. Cleanup local source video and select chunks based on instance count ──
+    try {
+      await fs.rm(localVideoPath, { force: true });
+      console.log(`[split] Cleaned up local main video: ${localVideoPath}`);
+    } catch (err) {
+      console.error("[split] Failed to delete local main video:", err);
+    }
+
+    const instanceCount = parseInt(process.env.INSTANCE_COUNT ?? "1", 10);
+    console.log(`[split] Instance count: ${instanceCount}. Performing local chunk cleanup...`);
+    if (instanceCount > 1) {
+      // Keep chunk_000.mp4, delete other local raw chunks to save space
+      const files = await fs.readdir(chunksDir);
+      for (const file of files) {
+        if (file !== "chunk_000.mp4") {
+          try {
+            await fs.rm(path.join(chunksDir, file), { force: true });
+            console.log(`[split] Cleaned up local chunk: ${file}`);
+          } catch (err) {
+            console.error(`[split] Failed to clean up local chunk ${file}:`, err);
+          }
+        }
+      }
+    } else {
+      console.log("[split] Single instance run: retaining all local chunks for local encoding");
+    }
   } finally {
     await cleanupDir(tempDir);
   }

@@ -41,14 +41,15 @@ export const initVideoState = async (
   totalChunks: number,
   qualities: VideoQuality[]
 ): Promise<void> => {
+  const roundedDuration = Math.round(durationSeconds || 0);
   await sql`
     INSERT INTO video_pipeline_state
       (video_id, status, duration_seconds, total_chunks, completed_chunks, qualities)
     VALUES
-      (${videoId}, 'ENCODING', ${durationSeconds}, ${totalChunks}, 0, ${JSON.stringify(qualities)})
+      (${videoId}, 'ENCODING', ${roundedDuration}, ${totalChunks}, 0, ${JSON.stringify(qualities)})
     ON CONFLICT (video_id) DO UPDATE SET
       status           = 'ENCODING',
-      duration_seconds = ${durationSeconds},
+      duration_seconds = ${roundedDuration},
       total_chunks     = ${totalChunks},
       completed_chunks = 0,
       qualities        = ${JSON.stringify(qualities)},

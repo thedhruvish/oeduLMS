@@ -189,6 +189,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     R2_PUBLIC_DOMAIN: process.env.R2_PUBLIC_DOMAIN ?? "",
     LAMBDA_CALLBACK_URL: process.env.LAMBDA_CALLBACK_URL!,
     CHUNK_DURATION_SECONDS: String(chunkDurationSeconds),
+    INSTANCE_COUNT: String(instanceCount),
   });
 
   const keyName = process.env.KEY_PAIR_NAME;
