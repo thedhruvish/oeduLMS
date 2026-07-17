@@ -11,7 +11,7 @@ export const ALL_QUALITIES: VideoQuality[] = [
 export const RECOMMENDED_QUALITIES: VideoQuality[] = [360, 720, 1080];
 
 /** Qualities that require smaller 4-min chunks */
-export const HIGH_RES_QUALITIES: VideoQuality[] = [1440, 2160, 4320];
+export const HIGH_RES_QUALITIES: VideoQuality[] = [1080,1440, 2160, 4320];
 
 // ── SQS task shapes ───────────────────────────────────────────────────────────
 
@@ -43,6 +43,10 @@ export type SQSTask = SplitTask | EncodeChunkTask;
 
 export type EC2Event =
   | {
+      event: "SPLIT_STARTED";
+      videoId: string;
+    }
+  | {
       event: "SPLIT_COMPLETE";
       videoId: string;
       durationSeconds: number;
@@ -67,7 +71,7 @@ export type CFEvent =
 
 // ── Pipeline state (stored in pipeline Neon DB) ───────────────────────────────
 
-export type ProcessingStatus = "SPLITTING" | "ENCODING" | "READY" | "ERROR";
+export type ProcessingStatus = "INIT" | "SPLITTING" | "ENCODING" | "READY" | "ERROR";
 
 export interface VideoState {
   videoId: string;

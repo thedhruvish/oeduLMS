@@ -427,8 +427,13 @@ adminCurriculumRouter.put(
         return c.json({ error: "Lecture not found" }, 404);
       }
 
-      // If videoUrl was updated to a new, different value, trigger transcoding
-      if (updatedLecture.videoUrl && updatedLecture.videoUrl !== oldVideoUrl) {
+      const oldQualities = existingLecture[0].qualities || [];
+      const newQualities = updatedLecture.qualities || [];
+      const qualitiesChanged =
+        JSON.stringify([...oldQualities].sort()) !== JSON.stringify([...newQualities].sort());
+
+      // If videoUrl was updated to a new value, or qualities changed, trigger transcoding
+      if (updatedLecture.videoUrl && (updatedLecture.videoUrl !== oldVideoUrl || qualitiesChanged)) {
         c.executionCtx.waitUntil(
           triggerTranscoding(
             c,

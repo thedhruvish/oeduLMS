@@ -17,17 +17,44 @@ import fsSync from "fs";
 
 const execAsync = promisify(exec);
 
-async function downloadFromYouTube(url: string, localPath: string): Promise<void> {
-  console.log(`[split] Downloading YouTube video using yt-dlp: ${url}`);
-  let cmd = `yt-dlp --extractor-args "youtube:player-client=ios" -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-playlist`;
-  
-  if (fsSync.existsSync("/app/cookies.txt")) {
-    console.log("[split] Using cookies.txt for YouTube authentication");
-    cmd += ` --cookies /app/cookies.txt`;
+async function run(cmd: string) {
+  return execAsync(cmd, {
+    maxBuffer: 20 * 1024 * 1024,
+  });
+}
+
+async function downloadFromYouTube(url: string, localPath: string) {
+   console.log(`[split] Downloading YouTube video using yt-dlp: ${url}`);
+  // let cmd = `yt-dlp --extractor-args "youtube:player-client=ios" -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-playlist`;
+  const base =
+    `-f "bv*+ba/b" --merge-output-format mp4 --no-playlist -o "${localPath}"`;
+
+  try {
+    await run(
+      `yt-dlp --extractor-args "youtube:player_client=ios" ${base} "${url}"`
+    );
+    return;
+  } catch {
+    //
   }
-  
-  cmd += ` "${url}" -o "${localPath}"`;
-  await execAsync(cmd);
+
+
+  try {
+    await run(
+      `yt-dlp --extractor-args "youtube:player_client=android" ${base} "${url}"`
+    );
+    return;
+  } catch { /* android without cookies failed, try with cookies */ }
+
+  if (fsSync.existsSync("/app/cookies.txt")) {
+     console.log("[split] Using cookies.txt for YouTube authentication");
+    await run(
+      `yt-dlp --extractor-args "youtube:player_client=android" --cookies /app/cookies.txt ${base} "${url}"`
+    );
+    return;
+  }
+
+  throw new Error("Failed to download YouTube video.");
 }
 
 /**
@@ -55,6 +82,9 @@ export const handleSplitTask = async (
       qualities,
     })
   );
+
+  // Notify immediately that this worker has started the split task → INIT → SPLITTING
+  await sendCallback({ event: "SPLIT_STARTED", videoId });
 
   const tempDir = await createTempDir();
   const localVideoPath = path.join(tempDir, "source.mp4");

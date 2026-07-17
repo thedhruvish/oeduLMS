@@ -63,13 +63,26 @@ To speed up processing and prevent workers from losing too much progress if an E
 
 ## 📈 EC2 Spot Instance Scaling
 
-Compute worker instances scale dynamically to match the duration of the incoming raw video:
+Compute worker instances scale dynamically based on the total transcoding workload, considering both the **video duration** and the **number/complexity of requested qualities** (using weighted values ranging from `0.2` for 144p to `10.0` for 8K resolution):
 
-$$\text{Instance Count} = \lceil\frac{\text{Duration in Seconds}}{3600}\rceil$$
+$$\text{Virtual Duration} = \text{Duration in Seconds} \times \sum_{q \in \text{qualities}} \text{Weight}(q)$$
 
-- **30-Minute Video**: 1 Instance.
-- **75-Minute Video**: 2 Instances.
-- **180-Minute Video**: 3 Instances.
+$$\text{Instance Count} = \text{Clamp}\left(1,\ \left\lceil\frac{\text{Virtual Duration}}{3600}\right\rceil,\ 8\right)$$
+
+- **30-Minute Video** with **8 standard qualities** (Sum of Weights = `6.2`):
+  *   $\text{Virtual Duration} = 1800 \times 6.2 = 11,160\text{ seconds (3.1 hours)}$
+  *   $\text{Instance Count} = 4\text{ Instances}$.
+- **1 Hour Video** with **recommended qualities only** (Sum of Weights = `3.0`):
+  *   $\text{Virtual Duration} = 3600 \times 3.0 = 10,800\text{ seconds (3 hours)}$
+  *   $\text{Instance Count} = 3\text{ Instances}$.
+- **30-Minute Video** with **144p only** (Sum of Weights = `0.2`):
+  *   $\text{Virtual Duration} = 1800 \times 0.2 = 360\text{ seconds (0.1 hours)}$
+  *   $\text{Instance Count} = 1\text{ Instance}$.
+
+### 🔄 Two-Stage Capacity-Aware Scaling
+To optimize AWS costs and prevent idle compute waste:
+1. **Trigger Stage (SPLIT Phase):** Only **1 worker instance** is needed to perform the fast video splitting. The Trigger Lambda queries the active running/pending EC2 Spot instances. If any worker is already running, it boots **0 new instances** (reusing the existing cluster). If no workers are active, it boots **exactly 1 instance** to kick off the SPLIT task.
+2. **Callback Stage (ENCODE Phase):** Once splitting finishes, the callback Lambda calculates the target instance count ($N$) required for the encoding load. It queries active worker count ($C$). If $C < N$, it dynamically launches the difference ($N - C$ additional instances) to encode the chunks in parallel. If $C \geq N$, it boots **0 new instances**, fully reusing the cluster.
 
 All spawned EC2 Spot instances process tasks concurrently from the same shared SQS FIFO queue (`VideoProcessing.fifo`), balancing the load dynamically.
 

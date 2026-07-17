@@ -1,8 +1,18 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { EC2Client } from "@aws-sdk/client-ec2";
 import type { Context } from "aws-lambda";
-import type { EC2Event, CFEvent, VideoQuality } from "./types";
+import {
+  type EC2Event,
+  type CFEvent,
+  type VideoQuality,
+  HIGH_RES_QUALITIES,
+  RECOMMENDED_QUALITIES,
+} from "./types";
 import { createPipelineSql, initVideoState, incrementChunk, setStatus, ensureTable } from "./pipeline-db";
 import { Readable } from "stream";
+import { calcInstanceCount, getRunningWorkerCount, launchWorkerInstances } from "./ec2-launcher";
+
+const ec2 = new EC2Client({ region: process.env.AWS_REGION ?? "us-east-1" });
 
 /**
  * Lambda: Callback handler
@@ -37,11 +47,53 @@ export const callbackHandler = async (
   await ensureTable(sql);
 
   switch (ec2Event.event) {
-    // ── SPLIT complete — init DB row, forward to CF Worker ────────────────
+    // ── SPLIT started — EC2 worker picked up the task, transition INIT → SPLITTING
+    case "SPLIT_STARTED": {
+      const { videoId } = ec2Event;
+      await sql`
+        UPDATE video_pipeline_state
+        SET status = 'SPLITTING', updated_at = NOW()
+        WHERE video_id = ${videoId} AND status = 'INIT'
+      `;
+      console.log(JSON.stringify({ lambda: "SPLIT_STARTED", videoId }));
+      break;
+    }
+
+    // ── SPLIT complete — update DB with real duration/chunks, scale up encoders ──
     case "SPLIT_COMPLETE": {
       const { videoId, durationSeconds, totalChunks, qualities } = ec2Event;
 
       await initVideoState(sql, videoId, durationSeconds, totalChunks, qualities);
+
+      // ── Failsafe scale-up check ──────────────────────────────────────────────
+      // The trigger already pre-booted all required instances upfront (when
+      // duration was known). This check only fires additional instances if the
+      // trigger didn't have duration info and only booted 1 instance.
+      const targetCount = calcInstanceCount(durationSeconds, qualities);
+      const runningCount = await getRunningWorkerCount(ec2);
+
+      console.log(`[callback] SPLIT_COMPLETE: targetCount=${targetCount}, runningCount=${runningCount}`);
+
+      if (runningCount < targetCount) {
+        const toLaunch = targetCount - runningCount;
+
+        const hasUltraHD = qualities.some((q) => HIGH_RES_QUALITIES.includes(q));
+        const isRecommendedOnly =
+          qualities.length === RECOMMENDED_QUALITIES.length &&
+          qualities.every((q) => RECOMMENDED_QUALITIES.includes(q));
+        const chunkDurationMinutes = hasUltraHD ? 4 : isRecommendedOnly ? 20 : 8;
+        const chunkDurationSeconds = chunkDurationMinutes * 60;
+
+        console.log(
+          `[callback] Failsafe scale-up: booting ${toLaunch} additional Spot instance(s) (duration was unknown at trigger time).`
+        );
+        const launched = await launchWorkerInstances(ec2, toLaunch, videoId, chunkDurationSeconds);
+        console.log(`[callback] Launched instances: ${JSON.stringify(launched)}`);
+      } else {
+        console.log(
+          `[callback] All ${runningCount} required instance(s) already running (target=${targetCount}). No scale-up needed.`
+        );
+      }
 
       const cfEvent: CFEvent = {
         event: "SPLIT_COMPLETE",

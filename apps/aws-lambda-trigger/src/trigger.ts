@@ -1,4 +1,4 @@
-import { EC2Client, RunInstancesCommand } from "@aws-sdk/client-ec2";
+import { EC2Client } from "@aws-sdk/client-ec2";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import {
@@ -8,82 +8,11 @@ import {
   type SplitTask,
   type VideoQuality,
 } from "./types";
+import { calcInstanceCount, getRunningWorkerCount, launchWorkerInstances } from "./ec2-launcher";
+import { createPipelineSql, ensureTable, createVideoState } from "./pipeline-db";
 
 const ec2 = new EC2Client({ region: process.env.AWS_REGION ?? "us-east-1" });
 const sqs = new SQSClient({ region: process.env.AWS_REGION ?? "us-east-1" });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EC2 spot instance count calculation
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * How many EC2 spot instances to run for a given video duration.
- * Rule: 1 instance per started hour of video.
- *   0–1 h  → 1
- *   1–2 h  → 2
- *   2–3 h  → 3
- *   …
- */
-function calcInstanceCount(durationSeconds: number): number {
-  const count = Math.ceil(durationSeconds / 3600);
-  return Math.max(1, count);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Build the EC2 UserData bootstrap script
-// ─────────────────────────────────────────────────────────────────────────────
-
-function buildUserData(env: Record<string, string>): string {
-  const exports = Object.entries(env)
-    .map(([k, v]) => `export ${k}="${v}"`)
-    .join("\n");
-
-  const script = `#!/bin/bash
-set -e
-
-# ── Environment ──────────────────────────────────────────────────────────────
-${exports}
-
-# ── Install system dependencies ──────────────────────────────────────────────
-apt-get update
-apt-get install -y curl unzip ffmpeg
-
-if ! command -v aws &> /dev/null; then
-  echo "Installing AWS CLI..."
-  apt-get install -y awscli
-fi
-
-if ! command -v node &> /dev/null; then
-  echo "Installing Node.js 24..."
-  curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
-  apt-get install -y nodejs
-fi
-
-if ! command -v yt-dlp &> /dev/null; then
-  echo "Installing yt-dlp..."
-  curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-  chmod a+rx /usr/local/bin/yt-dlp
-fi
-
-# ── Wait for SSM agent, then pull the worker binary/code from S3 ─────────────
-mkdir -p /app
-aws s3 cp s3://${process.env.WORKER_ASSETS_BUCKET}/ec2-video-worker.tar.gz /app/worker.tar.gz
-tar -xzf /app/worker.tar.gz -C /app
-aws s3 cp s3://${process.env.WORKER_ASSETS_BUCKET}/cookies.txt /app/cookies.txt || true
-
-# ── Install Node deps (already bundled in tar, but run just in case) ─────────
-cd /app
-npm install --production 2>/dev/null || true
-
-# ── Start the worker process ─────────────────────────────────────────────────
-node dist/index.js >> /var/log/video-worker.log 2>&1`;
-
-  return Buffer.from(script).toString("base64");
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main trigger handler
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface TriggerBody {
   /** Opaque video identifier from the LMS DB */
@@ -93,7 +22,6 @@ interface TriggerBody {
   /**
    * Quality ladder requested.
    * If omitted, defaults to [360, 720, 1080].
-   * Allowed values: 144|240|360|480|540|720|900|1080|1440|2160|4320
    */
   qualities?: VideoQuality[];
   /** CF Worker callback URL to receive progress events */
@@ -101,8 +29,6 @@ interface TriggerBody {
   /**
    * Known duration of the video in seconds.
    * Lambda will trust this for instance-count math.
-   * If unknown, leave undefined – instance count defaults to 1 and the
-   * SPLIT phase will report the real duration back via callbackUrl.
    */
   durationSeconds?: number;
 }
@@ -116,18 +42,20 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
   }
 
-  const { videoId, sourceS3Url, callbackUrl, durationSeconds } = body;
+  const { videoId, sourceS3Url, qualities, callbackUrl, durationSeconds } = body;
 
   if (!videoId || !sourceS3Url || !callbackUrl) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: "videoId, sourceS3Url, and callbackUrl are required" }),
+      body: JSON.stringify({
+        error: "Missing required fields: videoId, sourceS3Url, callbackUrl",
+      }),
     };
   }
 
-  // Validate & deduplicate qualities
-  const rawQualities: VideoQuality[] = body.qualities?.length
-    ? (body.qualities.filter((q) => ALL_QUALITIES.includes(q)) as VideoQuality[])
+  // Normalize requested qualities
+  const rawQualities = Array.isArray(qualities)
+    ? (qualities.filter((q) => ALL_QUALITIES.includes(q)) as VideoQuality[])
     : RECOMMENDED_QUALITIES;
 
   if (rawQualities.length === 0) {
@@ -135,9 +63,6 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
   }
 
   // ── Determine chunk duration based on quality set ───────────────────────────
-  // If user requests >= 1440p: use 4-min chunks.
-  // If recommended only:        use 20-min chunks.
-  // Otherwise (custom < 1440p): use 8-min chunks.
   const hasUltraHD = rawQualities.some((q) => HIGH_RES_QUALITIES.includes(q));
   const isRecommendedOnly =
     rawQualities.length === RECOMMENDED_QUALITIES.length &&
@@ -162,7 +87,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
   await sqs.send(
     new SendMessageCommand({
       QueueUrl: process.env.QUEUE_URL!,
-      MessageGroupId: videoId, // FIFO queue – order within a video
+      MessageGroupId: videoId,
       MessageDeduplicationId: `split-${videoId}-${runId}`,
       MessageBody: JSON.stringify(splitTask),
       MessageAttributes: {
@@ -174,68 +99,63 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     })
   );
 
-  // ── Launch EC2 spot instances ─────────────────────────────────────────────
-  const knownDuration = (durationSeconds && !isNaN(durationSeconds) && durationSeconds > 0) ? durationSeconds : 3600;
-  const instanceCount = calcInstanceCount(knownDuration);
+  // ── Insert pipeline DB row immediately ──────────────────────────────────────
+  // Create the row NOW so status is visible from the moment the trigger fires.
+  // (Before this fix, the row only appeared when SPLIT_COMPLETE was received ~10min later.)
+  try {
+    const sql = createPipelineSql();
+    await ensureTable(sql);
+    await createVideoState(sql, videoId, rawQualities, durationSeconds);
+    console.log(`[trigger] Pipeline DB row created for videoId=${videoId} with status=SPLITTING`);
+  } catch (dbErr: unknown) {
+    // Non-fatal: log and continue — the callback will upsert the row on SPLIT_COMPLETE
+    const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+    console.error(`[trigger] Failed to pre-create pipeline DB row: ${msg}`);
+  }
 
-  const userData = buildUserData({
-    QUEUE_URL: process.env.QUEUE_URL!,
-    S3_REGION: process.env.AWS_REGION ?? "us-east-1",
-    S3_BUCKET: process.env.S3_BUCKET!,
-    R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID!,
-    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID!,
-    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY!,
-    R2_BUCKET: process.env.R2_BUCKET!,
-    R2_PUBLIC_DOMAIN: process.env.R2_PUBLIC_DOMAIN ?? "",
-    LAMBDA_CALLBACK_URL: process.env.LAMBDA_CALLBACK_URL!,
-    CHUNK_DURATION_SECONDS: String(chunkDurationSeconds),
-    INSTANCE_COUNT: String(instanceCount),
-  });
+  // ── Pre-boot ALL required instances at trigger time ───────────────────────────
+  //
+  // KEY DESIGN: We boot ALL required instances immediately (not just 1) so they
+  // all boot in parallel during the SPLIT phase (~5-10 min). By the time encoding
+  // tasks appear in SQS, ALL instances are already ready and can pull chunks
+  // concurrently — giving true parallel encoding.
+  //
+  // If duration is unknown, we boot 1 instance (conservative). The SPLIT_COMPLETE
+  // callback will scale up more once the real duration is known.
+  //
+  const runningWorkers = await getRunningWorkerCount(ec2);
 
-  const keyName = process.env.KEY_PAIR_NAME;
-  const securityGroupId = process.env.SECURITY_GROUP_ID;
+  // Calculate target instance count. If duration is unknown, default to 1.
+  const targetCount = durationSeconds
+    ? calcInstanceCount(durationSeconds, rawQualities)
+    : 1;
 
-  const runResult = await ec2.send(
-    new RunInstancesCommand({
-      ImageId: process.env.AMI_ID!,
-      InstanceType: "c5.2xlarge", // 8 vCPU, good for ffmpeg parallel encode
-      MinCount: instanceCount,
-      MaxCount: instanceCount,
-      KeyName: keyName || undefined,
-      SecurityGroupIds: securityGroupId ? [securityGroupId] : undefined,
-      InstanceMarketOptions: {
-        MarketType: "spot",
-        SpotOptions: {
-          SpotInstanceType: "one-time",
-          InstanceInterruptionBehavior: "terminate",
-        },
-      },
-      IamInstanceProfile: { Arn: process.env.INSTANCE_PROFILE_ARN! },
-      UserData: userData,
-      // Persist worker logs to CloudWatch via instance metadata
-      TagSpecifications: [
-        {
-          ResourceType: "instance",
-          Tags: [
-            { Key: "Name", Value: `video-worker-${videoId}` },
-            { Key: "VideoId", Value: videoId },
-            { Key: "Role", Value: "video-encoder" },
-          ],
-        },
-      ],
-    })
-  );
+  let launchedInstances: string[] = [];
 
-  const instanceIds = runResult.Instances?.map((i) => i.InstanceId) ?? [];
+  if (runningWorkers >= targetCount) {
+    // Existing cluster has enough capacity — reuse it.
+    console.log(
+      `[trigger] ${runningWorkers} workers already running (target=${targetCount}). Reusing existing cluster.`
+    );
+  } else {
+    // Boot the gap to reach the target count.
+    const toLaunch = targetCount - runningWorkers;
+    console.log(
+      `[trigger] Booting ${toLaunch} Spot instance(s) upfront (running=${runningWorkers}, target=${targetCount}).`
+    );
+    launchedInstances = await launchWorkerInstances(ec2, toLaunch, videoId, chunkDurationSeconds);
+  }
 
   console.log(
     JSON.stringify({
       event: "PIPELINE_STARTED",
       videoId,
-      instanceCount,
-      instanceIds,
+      instanceCount: launchedInstances.length,
+      instanceIds: launchedInstances,
       qualities: rawQualities,
       chunkDurationMinutes,
+      targetCount,
+      reusingCluster: runningWorkers >= targetCount,
     })
   );
 
@@ -244,10 +164,12 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     body: JSON.stringify({
       message: "Video pipeline started",
       videoId,
-      instanceCount,
-      instanceIds,
+      instanceCount: launchedInstances.length,
+      instanceIds: launchedInstances,
       qualities: rawQualities,
       chunkDurationMinutes,
+      targetCount,
+      reusingCluster: runningWorkers >= targetCount,
     }),
   };
 };

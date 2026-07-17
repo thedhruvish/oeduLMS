@@ -33,7 +33,39 @@ export const ensureTable = async (sql: NeonQueryFunction<false, false>): Promise
 
 // ── Writes ────────────────────────────────────────────────────────────────────
 
-/** Upsert row when SPLIT_COMPLETE received */
+/**
+ * Called immediately when the Trigger Lambda fires.
+ * Inserts a SPLITTING row so the pipeline is visible from the moment EC2 boots.
+ * Uses ON CONFLICT so a re-trigger just resets the row.
+ */
+export const createVideoState = async (
+  sql: NeonQueryFunction<false, false>,
+  videoId: string,
+  qualities: VideoQuality[],
+  durationSeconds?: number
+): Promise<void> => {
+  const roundedDuration = durationSeconds ? Math.round(durationSeconds) : null;
+  await sql`
+    INSERT INTO video_pipeline_state
+      (video_id, status, duration_seconds, total_chunks, completed_chunks, qualities)
+    VALUES
+      (${videoId}, 'INIT', ${roundedDuration}, null, 0, ${JSON.stringify(qualities)})
+    ON CONFLICT (video_id) DO UPDATE SET
+      status           = 'INIT',
+      duration_seconds = ${roundedDuration},
+      total_chunks     = null,
+      completed_chunks = 0,
+      qualities        = ${JSON.stringify(qualities)},
+      error_message    = null,
+      master_url       = null,
+      updated_at       = NOW()
+  `;
+};
+
+/**
+ * Called when SPLIT_COMPLETE is received from EC2.
+ * Updates the existing row (created at trigger time) with real duration and chunk count.
+ */
 export const initVideoState = async (
   sql: NeonQueryFunction<false, false>,
   videoId: string,

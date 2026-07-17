@@ -9,7 +9,7 @@ build
 *.tsbuildinfo
 ec2-video*
 demo-video
-
+cookies.txt
 # Generated files
 apps/web/src/routeTree.gen.ts
 

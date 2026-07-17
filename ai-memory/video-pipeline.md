@@ -79,14 +79,43 @@ To balance splitting speed and resume granularity during spot terminations, diff
 
 ## 2. EC2 Spot Instance Scaling
 
-Compute instances are scaled dynamically based on video duration. We launch **1 Spot Instance per hour of video** (rounded up).
+Compute worker instances scale dynamically to match the actual workload, which is determined by both the **video duration** and the **number/complexity of requested qualities**. This ensures that short videos with many quality tiers do not get bottlenecked on a single instance.
 
-$$\text{Instance Count} = \lceil\frac{\text{Duration in Seconds}}{3600}\rceil$$
+### A. Quality Workload Weights
+Each quality resolution tier is assigned a weight based on CPU transcoding complexity:
+*   **144p:** `0.2` | **240p:** `0.3` | **360p:** `0.5`
+*   **480p:** `0.7` | **540p:** `0.8` | **720p:** `1.0`
+*   **900p:** `1.2` | **1080p:** `1.5`
+*   **1440p:** `2.5` | **2160p (4K):** `5.0` | **4320p (8K):** `10.0`
 
-*Example Calculations:*
-*   **45 Min** Video $\to$ 1 Instance
-*   **1 Hr 15 Min** Video $\to$ 2 Instances
-*   **2 Hr 30 Min** Video $\to$ 3 Instances
+### B. Formula
+$$\text{Virtual Duration} = \text{Duration in Seconds} \times \sum_{q \in \text{qualities}} \text{Weight}(q)$$
+
+$$\text{Instance Count} = \text{Clamp}\left(1,\ \left\lceil\frac{\text{Virtual Duration}}{3600}\right\rceil,\ 8\right)$$
+
+We launch **1 Spot Instance per virtual hour** of transcoding work, capped at a minimum of `1` and a maximum of `8` instances to optimize speed while preventing runaway compute charges.
+
+### C. Example Calculations
+1.  **30 Min (1800s) Video** with all **8 standard ABR qualities** (Sum of Weights = `6.2`):
+    *   $\text{Virtual Duration} = 1800 \times 6.2 = 11,160\text{ seconds (3.1 hours)}$
+    *   $\text{Instance Count} = \lceil 11,160 / 3600 \rceil = 4\text{ instances}$
+2.  **3 Hour (10800s) Video** with **recommended qualities only** (`[360p, 720p, 1080p]`, Sum of Weights = `3.0`):
+    *   $\text{Virtual Duration} = 10800 \times 3.0 = 32,400\text{ seconds (9 hours)}$
+    *   $\text{Instance Count} = \min(8, \lceil 32,400 / 3600 \rceil) = 8\text{ instances (capped)}$
+3.  **30 Min (1800s) Video** with **144p only** (Weight = `0.2`):
+    *   $\text{Virtual Duration} = 1800 \times 0.2 = 360\text{ seconds (0.1 hours)}$
+    *   $\text{Instance Count} = \lceil 360 / 3600 \rceil = 1\text{ instance}$
+
+### D. Two-Stage Capacity-Aware Scaling
+To optimize costs and compute utilization:
+1.  **Trigger Phase (SPLIT):**
+    *   Splitting raw video is a fast, single-threaded copy task that only requires one worker.
+    *   The Trigger Lambda queries active workers (running/pending). If **no workers** exist, it boots **exactly 1** instance. If **at least 1** worker is active, it boots **0** new instances, relying on the existing cluster.
+2.  **Callback Phase (ENCODE):**
+    *   Once splitting finishes, `CallbackLambda` calculates the required target instance count ($N$) based on the parsed video duration and qualities.
+    *   It queries the current running worker count ($C$).
+    *   If $C < N$, it boots the difference ($N - C$ additional instances) to encode the chunks in parallel.
+    *   If $C \geq N$, it boots **0** new instances, fully utilizing the existing active capacity.
 
 All spawned instances process tasks concurrently from the same shared SQS FIFO queue (`VideoProcessing.fifo`), auto-balancing the load.
 
