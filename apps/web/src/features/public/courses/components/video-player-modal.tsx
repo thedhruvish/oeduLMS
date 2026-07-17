@@ -52,7 +52,13 @@ function getYouTubeEmbedUrl(url: string): string {
   return url;
 }
 
-export function VideoPlayerModal({ isOpen, onClose, videoUrl, title, hlsUrl }: VideoPlayerModalProps) {
+export function VideoPlayerModal({
+  isOpen,
+  onClose,
+  videoUrl,
+  title,
+  hlsUrl,
+}: VideoPlayerModalProps) {
   const [activeUrl, setActiveUrl] = React.useState(hlsUrl || videoUrl);
 
   React.useEffect(() => {

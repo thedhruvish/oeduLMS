@@ -136,14 +136,21 @@ publicCoursesRouter.get("/:idOrSlug/curriculum", async (c) => {
                 duration: true,
                 isPreview: true,
                 videoUrl: true,
+                hlsUrl: true,
               },
             },
           },
         },
       },
     });
-
-    return c.json(courseRecord?.sections || []);
+    const sections =
+      courseRecord?.sections.map((section) => ({
+        ...section,
+        lectures: section.lectures.map(({ videoUrl, hlsUrl, ...lecture }) =>
+          lecture.isPreview ? { ...lecture, videoUrl, hlsUrl } : lecture
+        ),
+      })) ?? [];
+    return c.json(sections || []);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to fetch curriculum";
     return c.json({ error: message }, 500);

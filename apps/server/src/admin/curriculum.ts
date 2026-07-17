@@ -57,13 +57,13 @@ async function triggerTranscoding(
         processingStatus: "SPLITTING",
       });
     }
-    const body  = JSON.stringify({
-        videoId: lectureId,
-        sourceS3Url: videoUrl,
-        qualities: numericQualities,
-        callbackUrl,
-      })
-      console.log(body)
+    const body = JSON.stringify({
+      videoId: lectureId,
+      sourceS3Url: videoUrl,
+      qualities: numericQualities,
+      callbackUrl,
+    });
+    console.log(body);
     // Call Lambda trigger endpoint
     const resp = await fetch(lambdaTriggerUrl, {
       method: "POST",
@@ -433,7 +433,10 @@ adminCurriculumRouter.put(
         JSON.stringify([...oldQualities].sort()) !== JSON.stringify([...newQualities].sort());
 
       // If videoUrl was updated to a new value, or qualities changed, trigger transcoding
-      if (updatedLecture.videoUrl && (updatedLecture.videoUrl !== oldVideoUrl || qualitiesChanged)) {
+      if (
+        updatedLecture.videoUrl &&
+        (updatedLecture.videoUrl !== oldVideoUrl || qualitiesChanged)
+      ) {
         c.executionCtx.waitUntil(
           triggerTranscoding(
             c,

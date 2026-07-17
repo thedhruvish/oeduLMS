@@ -88,7 +88,10 @@ export function LectureSheet({
   });
   const [isUploadingAttachment, setIsUploadingAttachment] = React.useState(false);
   const [attachmentProgress, setAttachmentProgress] = React.useState<number | null>(null);
-  const [previewVideo, setPreviewVideo] = React.useState<{ videoUrl: string; hlsUrl?: string | null } | null>(null);
+  const [previewVideo, setPreviewVideo] = React.useState<{
+    videoUrl: string;
+    hlsUrl?: string | null;
+  } | null>(null);
   const [previewVideoTitle, setPreviewVideoTitle] = React.useState<string>("");
 
   const handlePlayPreview = (url: string) => {
@@ -372,7 +375,7 @@ export function LectureSheet({
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.2 }}
                           >
-                             <MediaUploader
+                            <MediaUploader
                               value={field.state.value || ""}
                               maxSize={100 * 1024 * 1024 * 1024} // 100GB
                               onChange={(url) => {
@@ -419,7 +422,9 @@ export function LectureSheet({
 
                       <FormError isInvalid={isInvalid} errors={field.state.meta.errors} />
 
-                      {((!!editingLecture && !!editingLecture.videoUrl) || isStatusPending || !!pipelineStatus) && (
+                      {((!!editingLecture && !!editingLecture.videoUrl) ||
+                        isStatusPending ||
+                        !!pipelineStatus) && (
                         <div className="mt-3 p-3 border border-border rounded-lg bg-muted/20 flex flex-col gap-2">
                           <div className="flex items-center justify-between text-xs font-semibold">
                             <div className="flex items-center gap-1.5">
@@ -431,7 +436,9 @@ export function LectureSheet({
                                 className="inline-flex items-center justify-center p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition disabled:opacity-50 cursor-pointer"
                                 title="Refresh status"
                               >
-                                <RefreshCw className={cn("size-3", isStatusFetching && "animate-spin")} />
+                                <RefreshCw
+                                  className={cn("size-3", isStatusFetching && "animate-spin")}
+                                />
                               </button>
                             </div>
                             {isStatusPending ? (
@@ -505,7 +512,9 @@ export function LectureSheet({
                                             toast.success("Transcoding re-triggered successfully!");
                                           },
                                           onError: (err) => {
-                                            toast.error(err?.message || "Failed to re-trigger transcoding.");
+                                            toast.error(
+                                              err?.message || "Failed to re-trigger transcoding."
+                                            );
                                           },
                                         });
                                       }

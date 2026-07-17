@@ -183,7 +183,7 @@ export function MediaUploader({
             <img src={value} alt="Uploaded preview" className="size-full object-cover" />
           ) : isVideo(value) ? (
             onPlayPreview ? (
-              <div  
+              <div
                 onClick={() => onPlayPreview(value)}
                 className="relative size-full bg-muted flex items-center justify-center cursor-pointer group/player"
               >

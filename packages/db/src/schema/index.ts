@@ -11,4 +11,3 @@ export * from "./organizations";
 export * from "./coupons";
 export * from "./videos";
 export * from "./theme";
-

@@ -126,9 +126,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
   const runningWorkers = await getRunningWorkerCount(ec2);
 
   // Calculate target instance count. If duration is unknown, default to 1.
-  const targetCount = durationSeconds
-    ? calcInstanceCount(durationSeconds, rawQualities)
-    : 1;
+  const targetCount = durationSeconds ? calcInstanceCount(durationSeconds, rawQualities) : 1;
 
   let launchedInstances: string[] = [];
 

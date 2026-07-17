@@ -70,17 +70,19 @@ $$\text{Virtual Duration} = \text{Duration in Seconds} \times \sum_{q \in \text{
 $$\text{Instance Count} = \text{Clamp}\left(1,\ \left\lceil\frac{\text{Virtual Duration}}{3600}\right\rceil,\ 8\right)$$
 
 - **30-Minute Video** with **8 standard qualities** (Sum of Weights = `6.2`):
-  *   $\text{Virtual Duration} = 1800 \times 6.2 = 11,160\text{ seconds (3.1 hours)}$
-  *   $\text{Instance Count} = 4\text{ Instances}$.
+  - $\text{Virtual Duration} = 1800 \times 6.2 = 11,160\text{ seconds (3.1 hours)}$
+  - $\text{Instance Count} = 4\text{ Instances}$.
 - **1 Hour Video** with **recommended qualities only** (Sum of Weights = `3.0`):
-  *   $\text{Virtual Duration} = 3600 \times 3.0 = 10,800\text{ seconds (3 hours)}$
-  *   $\text{Instance Count} = 3\text{ Instances}$.
+  - $\text{Virtual Duration} = 3600 \times 3.0 = 10,800\text{ seconds (3 hours)}$
+  - $\text{Instance Count} = 3\text{ Instances}$.
 - **30-Minute Video** with **144p only** (Sum of Weights = `0.2`):
-  *   $\text{Virtual Duration} = 1800 \times 0.2 = 360\text{ seconds (0.1 hours)}$
-  *   $\text{Instance Count} = 1\text{ Instance}$.
+  - $\text{Virtual Duration} = 1800 \times 0.2 = 360\text{ seconds (0.1 hours)}$
+  - $\text{Instance Count} = 1\text{ Instance}$.
 
 ### 🔄 Two-Stage Capacity-Aware Scaling
+
 To optimize AWS costs and prevent idle compute waste:
+
 1. **Trigger Stage (SPLIT Phase):** Only **1 worker instance** is needed to perform the fast video splitting. The Trigger Lambda queries the active running/pending EC2 Spot instances. If any worker is already running, it boots **0 new instances** (reusing the existing cluster). If no workers are active, it boots **exactly 1 instance** to kick off the SPLIT task.
 2. **Callback Stage (ENCODE Phase):** Once splitting finishes, the callback Lambda calculates the target instance count ($N$) required for the encoding load. It queries active worker count ($C$). If $C < N$, it dynamically launches the difference ($N - C$ additional instances) to encode the chunks in parallel. If $C \geq N$, it boots **0 new instances**, fully reusing the cluster.
 
@@ -175,5 +177,6 @@ Located in [apps/web/src/features/courses/lecture-sheet.tsx](../apps/web/src/fea
 ## 🛠️ Resilient System Adjustments
 
 To ensure production reliability and prevent edge-case failures, the pipeline implements:
+
 - **Integer Duration Casting**: Every input video duration is automatically normalized via `Math.round(durationSeconds || 0)` inside the `initVideoState` DB handler in `aws-lambda-trigger`. This prevents SQL driver syntax crashes when float durations are reported.
 - **Double Protocol Protection**: Strips `https?://` dynamically from the `R2_PUBLIC_DOMAIN` environment variable in both the edge server and the callback Lambda. This guarantees that generated playlist URLs do not result in double protocol prefixes (such as `https://https://...`).

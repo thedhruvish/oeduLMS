@@ -10,7 +10,7 @@ export function DynamicThemeProvider({ children }: { children: React.ReactNode }
     const applyTheme = () => {
       const isDark = document.documentElement.classList.contains("dark");
       const activeThemeColors = isDark ? themeData.darkTheme : themeData.lightTheme;
-      
+
       // Apply theme properties directly to the main root html tag
       for (const [key, val] of Object.entries(activeThemeColors)) {
         document.documentElement.style.setProperty(key, val);

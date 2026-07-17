@@ -22,7 +22,7 @@ export function calcInstanceCount(durationSeconds: number, qualities: VideoQuali
   const sumWeights = qualities.reduce((sum, q) => sum + (QUALITY_WEIGHTS[q] || 1.0), 0);
   const weightFactor = qualities.length > 0 ? sumWeights : 1.5;
   const virtualDuration = durationSeconds * weightFactor;
-  
+
   const count = Math.ceil(virtualDuration / 3600);
   return Math.min(8, Math.max(1, count));
 }

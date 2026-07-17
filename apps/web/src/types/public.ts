@@ -17,6 +17,7 @@ export interface PublicLecture {
   duration: number;
   isPreview: boolean;
   videoUrl?: string | null;
+  hlsUrl?: string | null;
 }
 
 export interface PublicSection {

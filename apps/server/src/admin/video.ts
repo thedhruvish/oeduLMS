@@ -112,7 +112,11 @@ adminVideoRouter.post("/re-trigger", zValidator("json", retriggerSchema), async 
     const db = createDb();
 
     // Query lecture details to retrieve video url, qualities, and duration
-    const lectures = await db.select().from(courseLectures).where(eq(courseLectures.id, videoId)).limit(1);
+    const lectures = await db
+      .select()
+      .from(courseLectures)
+      .where(eq(courseLectures.id, videoId))
+      .limit(1);
     if (!lectures[0]) {
       return c.json({ error: "Lecture not found" }, 404);
     }

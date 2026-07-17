@@ -128,6 +128,7 @@ export function CourseCurriculum({ courseIdOrSlug }: CourseCurriculumProps) {
           isOpen={!!selectedLecture}
           onClose={() => setSelectedLecture(null)}
           videoUrl={selectedLecture.videoUrl}
+          hlsUrl={selectedLecture.hlsUrl}
           title={`Preview: ${selectedLecture.title}`}
         />
       )}

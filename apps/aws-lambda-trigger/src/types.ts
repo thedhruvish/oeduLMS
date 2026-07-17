@@ -11,7 +11,7 @@ export const ALL_QUALITIES: VideoQuality[] = [
 export const RECOMMENDED_QUALITIES: VideoQuality[] = [360, 720, 1080];
 
 /** Qualities that require smaller 4-min chunks */
-export const HIGH_RES_QUALITIES: VideoQuality[] = [1080,1440, 2160, 4320];
+export const HIGH_RES_QUALITIES: VideoQuality[] = [1080, 1440, 2160, 4320];
 
 // ── SQS task shapes ───────────────────────────────────────────────────────────
 

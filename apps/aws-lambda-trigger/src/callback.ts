@@ -8,7 +8,13 @@ import {
   HIGH_RES_QUALITIES,
   RECOMMENDED_QUALITIES,
 } from "./types";
-import { createPipelineSql, initVideoState, incrementChunk, setStatus, ensureTable } from "./pipeline-db";
+import {
+  createPipelineSql,
+  initVideoState,
+  incrementChunk,
+  setStatus,
+  ensureTable,
+} from "./pipeline-db";
 import { Readable } from "stream";
 import { calcInstanceCount, getRunningWorkerCount, launchWorkerInstances } from "./ec2-launcher";
 
@@ -72,7 +78,9 @@ export const callbackHandler = async (
       const targetCount = calcInstanceCount(durationSeconds, qualities);
       const runningCount = await getRunningWorkerCount(ec2);
 
-      console.log(`[callback] SPLIT_COMPLETE: targetCount=${targetCount}, runningCount=${runningCount}`);
+      console.log(
+        `[callback] SPLIT_COMPLETE: targetCount=${targetCount}, runningCount=${runningCount}`
+      );
 
       if (runningCount < targetCount) {
         const toLaunch = targetCount - runningCount;
@@ -309,7 +317,7 @@ async function buildMasterPlaylist(
       "#EXT-X-MEDIA-SEQUENCE:0",
       "#EXT-X-PLAYLIST-TYPE:VOD",
       ...stitchedLines,
-      "#EXT-X-ENDLIST"
+      "#EXT-X-ENDLIST",
     ].join("\n");
 
     await r2.send(

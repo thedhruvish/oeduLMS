@@ -171,7 +171,8 @@ function AdminThemeComponent() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Appearance & Theme</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Customize runtime CSS custom properties for your LMS theme. Changes are previewed in real-time.
+              Customize runtime CSS custom properties for your LMS theme. Changes are previewed in
+              real-time.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -179,14 +180,8 @@ function AdminThemeComponent() {
               <RefreshCw className="size-4 mr-2" />
               Reset Form
             </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={updateThemeMutation.isPending}
-            >
-              {updateThemeMutation.isPending && (
-                <Loader2 className="animate-spin mr-2 size-4" />
-              )}
+            <Button size="sm" onClick={handleSave} disabled={updateThemeMutation.isPending}>
+              {updateThemeMutation.isPending && <Loader2 className="animate-spin mr-2 size-4" />}
               Save Changes
             </Button>
           </div>
@@ -195,7 +190,9 @@ function AdminThemeComponent() {
         {/* TOP CONTROL PANEL (Theme name + presets) */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 bg-muted/30 p-4 rounded-xl border border-border/50">
           <div className="flex flex-col gap-1.5 max-w-sm w-full">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Theme Name</label>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Theme Name
+            </label>
             <Input
               value={themeName}
               onChange={(e) => setThemeName(e.target.value)}
@@ -205,7 +202,9 @@ function AdminThemeComponent() {
           </div>
 
           <div className="flex flex-col gap-1.5 flex-1 md:max-w-xl">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Quick Presets</label>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Quick Presets
+            </label>
             <div className="flex flex-wrap items-center gap-2">
               {THEME_PRESETS.map((preset) => (
                 <Button
@@ -424,7 +423,10 @@ function AdminThemeComponent() {
                   <span>💬</span> Social Feed Link
                 </div>
               </div>
-              <div className="h-px w-full my-1" style={{ backgroundColor: "var(--sidebar-border)" }} />
+              <div
+                className="h-px w-full my-1"
+                style={{ backgroundColor: "var(--sidebar-border)" }}
+              />
               <span className="text-[9px]" style={{ color: "var(--muted-foreground)" }}>
                 Simulates sidebar outline borders, accents, and rings.
               </span>
@@ -479,7 +481,7 @@ function AdminThemeComponent() {
                 Configure CSS custom properties applied in dark mode.
               </CardDescription>
             </CardHeader>
-             <CardContent className="-pt-3">
+            <CardContent className="-pt-3">
               <ScrollArea className="h-[480px] pr-4">
                 <div className="flex flex-col gap-4">
                   {COLOR_VARIABLES.map(({ key, label }) => {
