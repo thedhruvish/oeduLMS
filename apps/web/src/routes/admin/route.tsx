@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, redirect, Outlet, useLocation } from "@tanstack/react-router";
-import { SidebarProvider, SidebarInset } from "@oedulms/ui/components/sidebar";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@oedulms/ui/components/sidebar";
 
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { AdminHeaderActions } from "@/components/admin-header-actions";
@@ -53,6 +53,7 @@ function AdminLayout() {
       <SidebarInset className="h-screen overflow-hidden flex flex-col">
         <header className="flex h-16 shrink-0 items-center gap-4 border-b px-6 justify-between bg-card">
           <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1 md:hidden" />
             <span className="text-sm font-semibold text-foreground">{getPageTitle()}</span>
           </div>
           <AdminHeaderActions />

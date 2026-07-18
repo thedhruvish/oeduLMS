@@ -33,6 +33,7 @@ export function MediaUploader({
 }: MediaUploaderProps) {
   const [progress, setProgress] = React.useState<number | null>(null);
   const [isUploading, setIsUploading] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const confirm = useConfirm();
   const [uploadedKey, setUploadedKey] = React.useState<string | null>(null);
   const [currentUploadId, setCurrentUploadId] = React.useState<string | null>(null);
@@ -125,7 +126,7 @@ export function MediaUploader({
     accept: getAcceptOption(),
     maxFiles: 1,
     maxSize,
-    disabled: localIsUploading,
+    disabled: localIsUploading || isDeleting,
   });
 
   const handleRemove = async (e: React.MouseEvent) => {
@@ -154,6 +155,7 @@ export function MediaUploader({
       }
     }
 
+    setIsDeleting(true);
     if (keyToDelete) {
       try {
         await deleteFileFromS3(keyToDelete);
@@ -165,6 +167,7 @@ export function MediaUploader({
     setUploadedKey(null);
     onChange("");
     if (onRemove) onRemove();
+    setIsDeleting(false);
   };
 
   const isImage = (url: string) => {
@@ -204,6 +207,14 @@ export function MediaUploader({
             </div>
           )}
 
+          {/* Deleting overlay */}
+          {isDeleting && (
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10 animate-in fade-in duration-200">
+              <Loader2 className="size-6 text-destructive animate-spin" />
+              <span className="text-xs font-semibold text-destructive">Deleting file...</span>
+            </div>
+          )}
+
           {/* Remove Button */}
           <Button
             type="button"
@@ -211,7 +222,7 @@ export function MediaUploader({
             size="icon"
             className="absolute top-2 right-2 size-7 opacity-0 group-hover:opacity-100 transition shadow-md"
             onClick={handleRemove}
-            disabled={localIsUploading}
+            disabled={localIsUploading || isDeleting}
           >
             <X className="size-3.5" />
           </Button>

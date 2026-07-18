@@ -121,121 +121,121 @@ export function Navbar() {
               </div>
             )}
 
-            {/* Mobile menu trigger (only in Public Mode, as student mode has bottom bar) */}
-            {!isStudentMode && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 rounded-lg md:hidden"
-                onClick={() => setIsMobileOpen((v) => !v)}
-                aria-label="Toggle navigation menu"
-              >
-                <AnimatePresence mode="wait" initial={false}>
-                  {isMobileOpen ? (
-                    <motion.span
-                      key="close"
-                      initial={{ rotate: -90, opacity: 0 }}
-                      animate={{ rotate: 0, opacity: 1 }}
-                      exit={{ rotate: 90, opacity: 0 }}
-                      transition={{ duration: 0.18 }}
-                    >
-                      <X className="size-4" />
-                    </motion.span>
-                  ) : (
-                    <motion.span
-                      key="menu"
-                      initial={{ rotate: 90, opacity: 0 }}
-                      animate={{ rotate: 0, opacity: 1 }}
-                      exit={{ rotate: -90, opacity: 0 }}
-                      transition={{ duration: 0.18 }}
-                    >
-                      <Menu className="size-4" />
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </Button>
-            )}
+            {/* Mobile menu trigger */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 rounded-lg md:hidden"
+              onClick={() => setIsMobileOpen((v) => !v)}
+              aria-label="Toggle navigation menu"
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                {isMobileOpen ? (
+                  <motion.span
+                    key="close"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    <X className="size-4" />
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="menu"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    <Menu className="size-4" />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </Button>
           </div>
         </header>
       </div>
 
-      {/* Mobile Drawer (Only for Public Mode) */}
-      {!isStudentMode && (
-        <AnimatePresence>
-          {isMobileOpen && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                key="backdrop"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm md:hidden"
-                onClick={() => setIsMobileOpen(false)}
-              />
-              {/* Drawer */}
-              <motion.div
-                key="drawer"
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed right-3 top-20 z-50 w-64 rounded-(--radius-xl) border border-border/60 bg-background/90 backdrop-blur-xl shadow-2xl md:hidden flex flex-col overflow-hidden"
-              >
-                {/* Drawer nav */}
-                <nav className="p-3 flex flex-col gap-1">
-                  {publicLinks.map((link, i) => (
-                    <motion.div
-                      key={link.to}
-                      initial={{ x: 16, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: i * 0.06, duration: 0.25 }}
+      {/* Mobile Drawer */}
+      <AnimatePresence>
+        {isMobileOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm md:hidden"
+              onClick={() => setIsMobileOpen(false)}
+            />
+            {/* Drawer */}
+            <motion.div
+              key="drawer"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed right-3 top-20 z-50 w-64 rounded-(--radius-xl) border border-border/60 bg-background/90 backdrop-blur-xl shadow-2xl md:hidden flex flex-col overflow-hidden"
+            >
+              {/* Drawer nav */}
+              <nav className="p-3 flex flex-col gap-1">
+                {links.map((link, i) => (
+                  <motion.div
+                    key={link.to}
+                    initial={{ x: 16, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: i * 0.06, duration: 0.25 }}
+                  >
+                    <Link
+                      to={link.to}
+                      className={[
+                        "flex items-center px-3 py-2.5 rounded-(--radius-xl) text-sm font-medium transition-colors",
+                        isActive(link.to, "exact" in link ? (link.exact as boolean) : false)
+                          ? "bg-foreground/[0.08] text-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      ].join(" ")}
                     >
-                      <Link
-                        to={link.to}
-                        className={[
-                          "flex items-center px-3 py-2.5 rounded-(--radius-xl) text-sm font-medium transition-colors",
-                          isActive(link.to)
-                            ? "bg-foreground/[0.08] text-foreground"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                        ].join(" ")}
-                      >
-                        {link.label}
-                      </Link>
-                    </motion.div>
-                  ))}
-                </nav>
+                      {"icon" in link &&
+                        React.createElement(link.icon as React.ComponentType<{ className?: string }>, {
+                          className: "size-4 mr-2 shrink-0",
+                        })}
+                      {link.label}
+                    </Link>
+                  </motion.div>
+                ))}
+              </nav>
 
-                {/* Drawer footer */}
-                <div className="p-3 border-t border-border/60 flex flex-col gap-2">
-                  {user ? (
-                    <div className="flex justify-center py-2">
-                      <UserProfileDropdown />
-                    </div>
-                  ) : (
-                    <>
-                      <Link to={siteConfig.nav.login.to}>
-                        <Button
-                          variant="outline"
-                          className="w-full h-9 text-sm rounded-(--radius-lg)"
-                        >
-                          {siteConfig.nav.login.label}
-                        </Button>
-                      </Link>
-                      <Link to={siteConfig.nav.register.to}>
-                        <Button className="w-full h-9 text-sm bg-foreground text-background hover:bg-foreground/90 rounded-(--radius-lg)">
-                          {siteConfig.nav.register.label} Free
-                        </Button>
-                      </Link>
-                    </>
-                  )}
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-      )}
+              {/* Drawer footer */}
+              <div className="p-3 border-t border-border/60 flex flex-col gap-2">
+                {user ? (
+                  <div className="flex justify-center py-2">
+                    <UserProfileDropdown />
+                  </div>
+                ) : (
+                  <>
+                    <Link to={siteConfig.nav.login.to}>
+                      <Button
+                        variant="outline"
+                        className="w-full h-9 text-sm rounded-(--radius-lg)"
+                      >
+                        {siteConfig.nav.login.label}
+                      </Button>
+                    </Link>
+                    <Link to={siteConfig.nav.register.to}>
+                      <Button className="w-full h-9 text-sm bg-foreground text-background hover:bg-foreground/90 rounded-(--radius-lg)">
+                        {siteConfig.nav.register.label} Free
+                      </Button>
+                    </Link>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }

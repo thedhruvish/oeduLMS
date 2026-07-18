@@ -15,6 +15,7 @@ import {
 } from "@oedulms/ui/components/card";
 import { Switch } from "@oedulms/ui/components/switch";
 import { Button } from "@oedulms/ui/components/button";
+import { ScrollArea } from "@oedulms/ui/components/scroll-area";
 import {
   Settings,
   ShieldAlert,
@@ -228,77 +229,79 @@ function AdminSettingsComponent() {
             ) : !sessions || sessions.length === 0 ? (
               <p className="text-xs text-muted-foreground py-2">No active sessions found.</p>
             ) : (
-              <div className="max-h-[300px] overflow-y-auto pr-2 flex flex-col divide-y divide-border/40 scrollbar-thin">
-                {sessions.map((sess) => {
-                  const isCurrent = sess.id === currentSession?.session?.id;
-                  const { browser, os, isMobile } = parseUserAgent(sess.userAgent);
-                  const DeviceIcon = isMobile ? Smartphone : Laptop;
+              <ScrollArea className="h-[300px] pr-4">
+                <div className="flex flex-col divide-y divide-border/40">
+                  {sessions.map((sess) => {
+                    const isCurrent = sess.id === currentSession?.session?.id;
+                    const { browser, os, isMobile } = parseUserAgent(sess.userAgent);
+                    const DeviceIcon = isMobile ? Smartphone : Laptop;
 
-                  return (
-                    <div
-                      key={sess.id}
-                      className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-muted/60 border border-border/40 rounded-lg text-muted-foreground shrink-0 mt-0.5">
-                          <DeviceIcon className="size-4" />
-                        </div>
-                        <div className="flex flex-col gap-0.5 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-sm font-semibold text-foreground">
-                              {browser} on {os}
-                            </span>
-                            {isCurrent && (
-                              <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 font-bold px-1.5 py-0.5 rounded-full">
-                                Current Device
-                              </span>
-                            )}
+                    return (
+                      <div
+                        key={sess.id}
+                        className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-muted/60 border border-border/40 rounded-lg text-muted-foreground shrink-0 mt-0.5">
+                            <DeviceIcon className="size-4" />
                           </div>
-                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-0.5">
-                            {sess.ipAddress && (
-                              <span className="flex items-center gap-1">
-                                <Globe className="size-3" />
-                                {sess.ipAddress}
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-sm font-semibold text-foreground">
+                                {browser} on {os}
                               </span>
-                            )}
-                            <span className="flex items-center gap-1">
-                              <MapPin className="size-3" />
-                              {currentLocation &&
-                              sess.ipAddress === currentLocation.ip &&
-                              currentLocation.city &&
-                              currentLocation.country ? (
-                                <span>
-                                  {currentLocation.city}, {currentLocation.country} (Cloudflare CDN)
+                              {isCurrent && (
+                                <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 font-bold px-1.5 py-0.5 rounded-full">
+                                  Current Device
                                 </span>
-                              ) : (
-                                <IpLocation ip={sess.ipAddress} />
                               )}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="size-3" />
-                              Last active:{" "}
-                              {new Date(sess.updatedAt || sess.createdAt).toLocaleString()}
-                            </span>
+                            </div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-0.5">
+                              {sess.ipAddress && (
+                                <span className="flex items-center gap-1">
+                                  <Globe className="size-3" />
+                                  {sess.ipAddress}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <MapPin className="size-3" />
+                                {currentLocation &&
+                                sess.ipAddress === currentLocation.ip &&
+                                currentLocation.city &&
+                                currentLocation.country ? (
+                                  <span>
+                                    {currentLocation.city}, {currentLocation.country} (Cloudflare CDN)
+                                  </span>
+                                ) : (
+                                  <IpLocation ip={sess.ipAddress} />
+                                )}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="size-3" />
+                                Last active:{" "}
+                                {new Date(sess.updatedAt || sess.createdAt).toLocaleString()}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {!isCurrent && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/5 cursor-pointer shrink-0 border border-destructive/20 hover:border-destructive/40"
-                          onClick={() => handleRevokeSession(sess.id)}
-                          disabled={revokeSessionMutation.isPending}
-                        >
-                          <LogOut className="size-3 mr-1" />
-                          Log Out
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        {!isCurrent && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/5 cursor-pointer shrink-0 border border-destructive/20 hover:border-destructive/40"
+                            onClick={() => handleRevokeSession(sess.id)}
+                            disabled={revokeSessionMutation.isPending}
+                          >
+                            <LogOut className="size-3 mr-1" />
+                            Log Out
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             )}
           </CardContent>
         </Card>

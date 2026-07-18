@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ProTech</title>
+    <script>
+      (function() {
+        var savedTheme = localStorage.getItem("vite-ui-theme") || "dark";
+        var isDark = savedTheme === "dark" || (savedTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", isDark);
+        document.documentElement.style.backgroundColor = isDark ? "#09090b" : "#ffffff";
+        document.documentElement.style.color = isDark ? "#fafafa" : "#09090b";
+      })();
+    </script>
   </head>
 
   <body>

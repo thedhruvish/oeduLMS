@@ -1,6 +1,17 @@
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Search, LogOut, BookOpen, Users, GraduationCap, LayoutDashboard } from "lucide-react";
+import { 
+  Search, 
+  LogOut, 
+  BookOpen, 
+  Users, 
+  GraduationCap, 
+  LayoutDashboard,
+  Ticket,
+  Settings,
+  MessageSquare,
+  Palette,
+} from "lucide-react";
 import { toast } from "sonner";
 import { UploadsHeaderIndicator } from "@/components/ui/uploads-header-indicator";
 
@@ -115,7 +126,7 @@ export function AdminHeaderActions() {
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
           <CommandGroup heading="Navigation">
-            <CommandItem onSelect={() => handleCommandSelect("/admin")}>
+            <CommandItem onSelect={() => handleCommandSelect("/admin/dash")}>
               <LayoutDashboard className="size-4" />
               <span>Go to Overview Dashboard</span>
             </CommandItem>
@@ -123,13 +134,29 @@ export function AdminHeaderActions() {
               <BookOpen className="size-4" />
               <span>Go to Courses Catalogue</span>
             </CommandItem>
-            <CommandItem onSelect={() => handleCommandSelect("/admin/students")}>
-              <Users className="size-4" />
-              <span>Go to Enrolled Students</span>
+            <CommandItem onSelect={() => handleCommandSelect("/admin/coupons")}>
+              <Ticket className="size-4" />
+              <span>Go to Coupons Management</span>
             </CommandItem>
             <CommandItem onSelect={() => handleCommandSelect("/admin/enrollments")}>
               <GraduationCap className="size-4" />
               <span>Go to Active Enrollments</span>
+            </CommandItem>
+            <CommandItem onSelect={() => handleCommandSelect("/admin/students")}>
+              <Users className="size-4" />
+              <span>Go to Enrolled Students</span>
+            </CommandItem>
+            <CommandItem onSelect={() => handleCommandSelect("/admin/feed")}>
+              <MessageSquare className="size-4" />
+              <span>Go to Social Feed Forum</span>
+            </CommandItem>
+            <CommandItem onSelect={() => handleCommandSelect("/admin/theme")}>
+              <Palette className="size-4" />
+              <span>Go to Theme Settings</span>
+            </CommandItem>
+            <CommandItem onSelect={() => handleCommandSelect("/admin/settings")}>
+              <Settings className="size-4" />
+              <span>Go to System Settings</span>
             </CommandItem>
           </CommandGroup>
           <CommandSeparator />

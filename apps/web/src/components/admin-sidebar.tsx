@@ -33,12 +33,15 @@ export function AdminSidebar() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const logoutMutation = useLogout();
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
 
   const handleLogout = async () => {
     try {
       await logoutMutation.mutateAsync();
       toast.success("Successfully logged out");
+      if (isMobile) {
+        setOpenMobile(false);
+      }
       navigate({ to: "/auth/login" });
     } catch {
       toast.error("Failed to log out");
@@ -58,11 +61,6 @@ export function AdminSidebar() {
       icon: BookOpen,
     },
     {
-      title: "Students",
-      to: "/admin/students",
-      icon: Users,
-    },
-    {
       title: "Coupons",
       to: "/admin/coupons",
       icon: Ticket,
@@ -73,6 +71,16 @@ export function AdminSidebar() {
       icon: GraduationCap,
     },
     {
+      title: "Students",
+      to: "/admin/students",
+      icon: Users,
+    },
+    {
+      title: "Social Feed",
+      to: "/admin/feed",
+      icon: MessageSquare,
+    },
+    {
       title: "Theme Settings",
       to: "/admin/theme",
       icon: Palette,
@@ -81,11 +89,6 @@ export function AdminSidebar() {
       title: "Settings",
       to: "/admin/settings",
       icon: Settings,
-    },
-    {
-      title: "Social Feed",
-      to: "/admin/feed",
-      icon: MessageSquare,
     },
   ];
 
@@ -122,6 +125,11 @@ export function AdminSidebar() {
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   tooltip={item.title}
+                  onClick={() => {
+                    if (isMobile) {
+                      setOpenMobile(false);
+                    }
+                  }}
                   render={
                     <Link
                       to={item.to}

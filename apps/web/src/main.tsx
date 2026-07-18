@@ -5,7 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import Loader from "./components/loader";
 import { routeTree } from "./routeTree.gen";
 import { queryClient } from "@/lib/query-client";
-import { useAuth } from "@/api/auth";
+import { useAuth, authQueryOptions } from "@/api/auth";
 import type { AuthContextType } from "@/types/auth";
 
 const router = createRouter({
@@ -45,11 +45,16 @@ if (!rootElement) {
   throw new Error("Root element not found");
 }
 
+
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
-  root.render(
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  );
+  
+  // Prime auth session query cache before mounting to prevent initial route pending flash
+  queryClient.ensureQueryData(authQueryOptions).finally(() => {
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    );
+  });
 }
