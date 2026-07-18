@@ -3,6 +3,8 @@ import { createDb } from "@oedulms/db";
 import { siteTheme } from "@oedulms/db/schema/theme";
 import { eq } from "@oedulms/db/dzl";
 import type { AppVariables } from "../types";
+import { CACHE_KEYS } from "../utils/cache-keys";
+import { cacheService } from "../utils/cache";
 
 export const publicThemeRouter = new Hono<AppVariables>();
 
@@ -61,22 +63,29 @@ const DEFAULT_DARK_THEME: Record<string, string> = {
 };
 
 publicThemeRouter.get("/", async (c) => {
+  const cacheKey = CACHE_KEYS.PUBLIC_SITE_THEME;
+
+  const cachedData = await cacheService.get<Record<string, unknown>>(c, cacheKey);
+  if (cachedData) {
+    return c.json(cachedData);
+  }
+
   try {
     const db = createDb();
     const theme = await db.query.siteTheme.findFirst({
       where: eq(siteTheme.id, "default"),
     });
 
-    if (!theme) {
-      return c.json({
-        id: "default",
-        name: "Default Theme",
-        lightTheme: DEFAULT_LIGHT_THEME,
-        darkTheme: DEFAULT_DARK_THEME,
-      });
-    }
+    const themeResponse = theme || {
+      id: "default",
+      name: "Default Theme",
+      lightTheme: DEFAULT_LIGHT_THEME,
+      darkTheme: DEFAULT_DARK_THEME,
+    };
 
-    return c.json(theme);
+    await cacheService.set(c, cacheKey, themeResponse, 18000); // Cache for 5 hours (5 * 60 * 60 seconds)
+
+    return c.json(themeResponse);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Failed to fetch theme";
     return c.json({ error: msg }, 500);

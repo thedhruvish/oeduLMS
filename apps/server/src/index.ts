@@ -8,9 +8,12 @@ import { evlog } from "evlog/hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
+import { getCookie } from "hono/cookie";
 
-import type { AppVariables } from "./types";
+import type { AppVariables, SessionUser } from "./types";
 import { apiRouter } from "./router";
+import { CACHE_KEYS } from "./utils/cache-keys";
+import { cacheService } from "./utils/cache";
 
 initLogger({
   env: { service: "oedulms-server" },
@@ -37,7 +40,7 @@ app.use("/*", async (c, next) => {
 
 // Identify user for logging (does not block requests)
 app.use("*", async (c, next) => {
-  const identifyUser = createAuthMiddleware(createAuth() as BetterAuthInstance, {
+  const identifyUser = createAuthMiddleware(createAuth(c.env as unknown as Record<string, unknown>) as BetterAuthInstance, {
     exclude: ["/api/auth/**"],
     maskEmail: true,
   });
@@ -46,11 +49,22 @@ app.use("*", async (c, next) => {
 });
 
 // Public auth routes (Better Auth)
-app.on(["POST", "GET"], "/api/auth/*", (c) => createAuth().handler(c.req.raw));
+app.on(["POST", "GET"], "/api/auth/*", (c) => createAuth(c.env as unknown as Record<string, unknown>).handler(c.req.raw));
 
 // Public /api/me route (used by the frontend to get the current session)
 app.get("/api/me", async (c) => {
-  const auth = createAuth();
+  const sessionToken = getCookie(c, "better-auth.session_token");
+  const cacheKey = sessionToken ? CACHE_KEYS.USER_SESSION(sessionToken) : "";
+
+  const cached = cacheKey
+    ? await cacheService.get<{ user: SessionUser; role: string }>(c, cacheKey)
+    : null;
+
+  if (cached) {
+    return c.json(cached);
+  }
+
+  const auth = createAuth(c.env as unknown as Record<string, unknown>);
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
   });
@@ -67,8 +81,13 @@ app.get("/api/me", async (c) => {
     .limit(1);
 
   const role = roleRecord[0]?.role ?? "STUDENT";
+  const responseData = { user: session.user, role };
 
-  return c.json({ user: session.user, role });
+  if (cacheKey) {
+    await cacheService.set(c, cacheKey, responseData, 30); // Cache for 30 seconds
+  }
+
+  return c.json(responseData);
 });
 
 // All protected API routes — auth guard applied once inside apiRouter

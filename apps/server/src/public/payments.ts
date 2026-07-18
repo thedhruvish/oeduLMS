@@ -271,7 +271,7 @@ publicPaymentsRouter.post("/create-order", async (c) => {
     const finalAmount = Math.max(0, basePrice - couponDiscount);
 
     // User resolution/signup
-    const auth = createAuth();
+    const auth = createAuth(c.env as unknown as Record<string, unknown>);
     const session = await auth.api.getSession({
       headers: c.req.raw.headers,
     });

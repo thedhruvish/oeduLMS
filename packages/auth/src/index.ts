@@ -6,14 +6,40 @@ import { sendResetPasswordEmail, sendVerificationEmail } from "./utils/resend";
 
 export { sendResetPasswordEmail, sendVerificationEmail };
 
-export function createAuth() {
+interface SecondaryKVStore {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+
+export function createAuth(env?: Record<string, unknown>) {
   const db = createDb();
+
+  const envRecord = (env || process.env) as unknown as Record<string, unknown>;
+  const globalRecord = globalThis as unknown as Record<string, unknown>;
+  const authKv = (envRecord.PROTECH_KV || globalRecord.PROTECH_KV) as SecondaryKVStore | undefined;
+
+  const secondaryStorage = authKv
+    ? {
+        get: async (key: string) => {
+          return await authKv.get(key);
+        },
+        set: async (key: string, value: string, ttl?: number) => {
+          const options = ttl ? { expirationTtl: ttl } : undefined;
+          await authKv.put(key, value, options);
+        },
+        delete: async (key: string) => {
+          await authKv.delete(key);
+        },
+      }
+    : undefined;
 
   return betterAuth({
     database: drizzleAdapter(db, {
       provider: "pg",
       schema: schema,
     }),
+    ...(secondaryStorage ? { secondaryStorage } : {}),
     trustedOrigins: process.env.CORS_ORIGIN ? [process.env.CORS_ORIGIN] : [],
     emailAndPassword: {
       requireEmailVerification: true,

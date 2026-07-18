@@ -11,7 +11,7 @@ import type { AppVariables } from "../types";
  * Returns 401 if not authenticated.
  */
 export const authGuard = createMiddleware<AppVariables>(async (c, next) => {
-  const auth = createAuth();
+  const auth = createAuth(c.env as unknown as Record<string, unknown>);
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
   });

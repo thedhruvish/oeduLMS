@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { createDb } from "@oedulms/db";
 import { siteTheme } from "@oedulms/db/schema/theme";
 import type { AppVariables } from "../types";
+import { CACHE_KEYS } from "../utils/cache-keys";
+import { cacheService } from "../utils/cache";
 
 export const adminThemeRouter = new Hono<AppVariables>();
 
@@ -29,9 +31,10 @@ adminThemeRouter.post("/", async (c) => {
           name,
           lightTheme,
           darkTheme,
-          updatedAt: new Date(),
         },
       });
+
+    await cacheService.delete(c, CACHE_KEYS.PUBLIC_SITE_THEME);
 
     return c.json({ success: true });
   } catch (error: unknown) {
