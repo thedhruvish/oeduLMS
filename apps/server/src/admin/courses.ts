@@ -7,6 +7,8 @@ import { zValidator } from "@hono/zod-validator";
 import { courseSchema } from "@oedulms/validator";
 import type { AppVariables } from "../types";
 import { slugify } from "@/utils/slugify";
+import { CACHE_KEYS } from "@/utils/cache-keys";
+import { cacheService } from "@/utils/cache";
 
 export const adminCoursesRouter = new Hono<AppVariables>();
 
@@ -68,13 +70,14 @@ adminCoursesRouter.get("/:id", async (c) => {
   const id = c.req.param("id");
   const db = createDb();
 
-  const courseList = await db.select().from(courses).where(eq(courses.id, id)).limit(1);
+  const [courseList, faqs] = await Promise.all([
+    db.select().from(courses).where(eq(courses.id, id)).limit(1),
+    db.select().from(courseFaqs).where(eq(courseFaqs.courseId, id)),
+  ]);
 
   if (courseList.length === 0) {
     return c.json({ error: "Course not found" }, 404);
   }
-
-  const faqs = await db.select().from(courseFaqs).where(eq(courseFaqs.courseId, id));
 
   return c.json({ ...courseList[0], faqs });
 });
@@ -129,6 +132,8 @@ adminCoursesRouter.post("/", zValidator("json", courseSchema), async (c) => {
       )
       .returning();
   }
+
+  await cacheService.delete(c, CACHE_KEYS.PUBLIC_COURSES);
 
   return c.json({ ...newCourse, faqs: insertedFaqs }, 201);
 });
@@ -195,6 +200,8 @@ adminCoursesRouter.put("/:id", zValidator("json", courseSchema.partial()), async
     updatedFaqs = await db.select().from(courseFaqs).where(eq(courseFaqs.courseId, id));
   }
 
+  await cacheService.delete(c, CACHE_KEYS.PUBLIC_COURSES);
+
   return c.json({ ...updated, faqs: updatedFaqs });
 });
 
@@ -210,5 +217,6 @@ adminCoursesRouter.delete("/:id", async (c) => {
   }
 
   await db.delete(courses).where(eq(courses.id, id));
+  await cacheService.delete(c, CACHE_KEYS.PUBLIC_COURSES);
   return c.json({ message: "Course deleted successfully" });
 });

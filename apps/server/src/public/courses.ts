@@ -4,12 +4,11 @@ import { courses } from "@oedulms/db/schema/courses";
 import { instructorProfiles } from "@oedulms/db/schema/profiles";
 import { eq } from "@oedulms/db/dzl";
 import type { AppVariables } from "../types";
+import { isValidUuid } from "../utils/uuid";
+import { CACHE_KEYS } from "../utils/cache-keys";
+import { cacheService } from "../utils/cache";
 
 export const publicCoursesRouter = new Hono<AppVariables>();
-
-function isValidUuid(val: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
-}
 
 // Helper to find a published course ID by either ID or slug
 async function resolveCourseId(
@@ -31,8 +30,13 @@ async function resolveCourseId(
   return record.id;
 }
 
-// 1. GET / — List all published courses
 publicCoursesRouter.get("/", async (c) => {
+  const cacheKey = CACHE_KEYS.PUBLIC_COURSES;
+  const cachedCourses = await cacheService.get<unknown[]>(c, cacheKey);
+  if (cachedCourses) {
+    return c.json(cachedCourses);
+  }
+
   try {
     const db = createDb();
     const publishedCourses = await db
@@ -50,6 +54,8 @@ publicCoursesRouter.get("/", async (c) => {
       .from(courses)
       .leftJoin(instructorProfiles, eq(courses.instructorId, instructorProfiles.id))
       .where(eq(courses.status, "PUBLISHED"));
+
+    await cacheService.set(c, cacheKey, publishedCourses, 300); // Cache for 5 minutes
 
     return c.json(publishedCourses);
   } catch (error: unknown) {
