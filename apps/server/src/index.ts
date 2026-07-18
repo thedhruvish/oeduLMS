@@ -14,6 +14,7 @@ import type { AppVariables, SessionUser } from "./types";
 import { apiRouter } from "./router";
 import { CACHE_KEYS } from "./utils/cache-keys";
 import { cacheService } from "./utils/cache";
+import { rateLimiter } from "./middleware/rate-limit";
 
 initLogger({
   env: { service: "oedulms-server" },
@@ -21,11 +22,28 @@ initLogger({
 
 const app = new Hono<AppVariables>();
 
+// Global IP-based rate limiting (max 120 requests per 60 seconds)
+app.use("*", rateLimiter({ limit: 120, windowSeconds: 60 }));
+
 // Logging middleware
 app.use(evlog());
 
 // Secure Headers
-app.use("*", secureHeaders());
+app.use(
+  "*",
+  secureHeaders({
+    contentSecurityPolicy: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.gstatic.com"],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://www.gstatic.com"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https://*"],
+      mediaSrc: ["'self'", "https://*"],
+      connectSrc: ["'self'", "https://*"],
+      frameSrc: ["'self'", "https://www.youtube.com", "https://*.youtube.com"],
+    },
+  })
+);
 
 // CORS
 app.use("/*", async (c, next) => {
