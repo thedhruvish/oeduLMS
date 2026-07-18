@@ -92,23 +92,35 @@ function AdminCoursesListComponent() {
       {courses && courses.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {courses.map((course) => (
-            <Card key={course.id} className="overflow-hidden">
-              {course.thumbnail ? (
-                <div>
-                  <img
-                    src={course.thumbnail}
-                    alt={course.title}
-                    className="aspect-video object-cover w-full"
-                  />
-                </div>
-              ) : (
-                <div className="bg-muted/40 aspect-video flex items-center justify-center">
-                  <BookOpen className="size-10 text-muted-foreground" />
-                </div>
-              )}
+            <Card key={course.id} className="overflow-hidden flex flex-col h-full">
+              <Link
+                to="/admin/courses/$id/curriculum"
+                params={{ id: course.id }}
+                className="block group shrink-0"
+              >
+                {course.thumbnail ? (
+                  <div className="overflow-hidden">
+                    <img
+                      src={course.thumbnail}
+                      alt={course.title}
+                      className="aspect-video object-cover w-full transition-transform duration-300 group-hover:scale-105"
+                    />
+                  </div>
+                ) : (
+                  <div className="bg-muted/40 aspect-video flex items-center justify-center">
+                    <BookOpen className="size-10 text-muted-foreground" />
+                  </div>
+                )}
+              </Link>
 
-              <CardContent className="p-4 flex flex-col gap-3">
-                <h3 className="font-semibold text-foreground truncate">{course.title}</h3>
+              <CardContent className="p-4 flex flex-col gap-3 flex-1">
+                <Link
+                  to="/admin/courses/$id/curriculum"
+                  params={{ id: course.id }}
+                  className="hover:text-primary transition-colors block"
+                >
+                  <h3 className="font-semibold text-foreground truncate">{course.title}</h3>
+                </Link>
 
                 <div className="text-sm font-medium">
                   {course.price === 0 ? (

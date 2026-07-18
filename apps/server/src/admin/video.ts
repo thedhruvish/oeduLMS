@@ -275,3 +275,54 @@ adminVideoRouter.get("/video/:videoId/status", async (c) => {
     return c.json({ error: msg }, 500);
   }
 });
+
+// ── DELETE /admin/video/:videoId ─────────────────────────────────────────────
+// Deletes a video record and cleans up associated S3 assets.
+adminVideoRouter.delete("/:videoId", async (c) => {
+  const videoId = c.req.param("videoId");
+
+  try {
+    const { createDb } = await import("@oedulms/db");
+    const { courseLectures } = await import("@oedulms/db/schema/courses");
+    const { videos } = await import("@oedulms/db/schema/videos");
+    const { eq } = await import("@oedulms/db/dzl");
+    const db = createDb();
+
+    // 1. Fetch details from both videos table and courseLectures table
+    const videoRecord = await db.select().from(videos).where(eq(videos.id, videoId)).limit(1);
+    const lectureRecord = await db
+      .select()
+      .from(courseLectures)
+      .where(eq(courseLectures.id, videoId))
+      .limit(1);
+
+    const hlsUrl = videoRecord[0]?.hlsMasterPlaylistUrl || lectureRecord[0]?.hlsUrl || null;
+    const videoUrl = lectureRecord[0]?.videoUrl || null;
+
+    // 2. Perform S3 deletion of the video assets
+    const { deleteVideoAssets } = await import("@/utils/s3-client");
+    await deleteVideoAssets(c, videoUrl, hlsUrl, videoId);
+
+    // 3. Clear video URLs in the lecture if it exists
+    if (lectureRecord[0]) {
+      await db
+        .update(courseLectures)
+        .set({
+          videoUrl: null,
+          hlsUrl: null,
+          duration: 0,
+          qualities: [],
+          updatedAt: new Date(),
+        })
+        .where(eq(courseLectures.id, videoId));
+    }
+
+    // 4. Delete from videos table in DB
+    await db.delete(videos).where(eq(videos.id, videoId));
+
+    return c.json({ success: true, message: "Video assets deleted successfully" });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ error: msg }, 500);
+  }
+});

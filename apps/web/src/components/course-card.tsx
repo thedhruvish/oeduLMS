@@ -68,7 +68,16 @@ export function CourseCard({ course, index }: CourseCardProps) {
       >
         {/* Thumbnail */}
         <div
-          className={`relative h-44 ${course.thumbnail ? "bg-muted" : `bg-gradient-to-br ${thumbClass}`} overflow-hidden shrink-0`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigate({
+              to: "/courses/$slug",
+              params: { slug: course.slug },
+              hash: "curriculum",
+            });
+          }}
+          className={`relative h-44 ${course.thumbnail ? "bg-muted" : `bg-gradient-to-br ${thumbClass}`} overflow-hidden shrink-0 cursor-pointer`}
         >
           {course.thumbnail ? (
             <img

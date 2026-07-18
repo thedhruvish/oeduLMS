@@ -483,6 +483,23 @@ adminCurriculumRouter.delete("/:courseId/sections/:sectionId/lectures/:id", asyn
   const db = createDb();
 
   try {
+    // 1. Fetch lecture details first to get the video assets URLs
+    const lecture = await db
+      .select()
+      .from(courseLectures)
+      .where(eq(courseLectures.id, id))
+      .limit(1);
+
+    if (lecture[0]) {
+      // 2. Perform S3 deletion of the video assets
+      const { deleteVideoAssets } = await import("@/utils/s3-client");
+      await deleteVideoAssets(c, lecture[0].videoUrl, lecture[0].hlsUrl, id);
+
+      // 3. Delete from videos processing table if it exists
+      const { videos } = await import("@oedulms/db/schema/videos");
+      await db.delete(videos).where(eq(videos.id, id));
+    }
+
     const [deletedLecture] = await db
       .delete(courseLectures)
       .where(eq(courseLectures.id, id))
