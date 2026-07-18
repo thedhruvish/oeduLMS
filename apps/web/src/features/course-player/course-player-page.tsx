@@ -302,32 +302,35 @@ export function CoursePlayerPage({ courseId, lectureId }: CoursePlayerPageProps)
         {/* ── Main column — both video and tabs scroll together ── */}
         <ScrollArea className="flex-1 min-w-0">
           <div className="flex flex-col">
-            <div
-              className="w-full shrink-0 overflow-hidden bg-black"
-              style={{ height: "min(56.25vw, 60dvh)" }}
-            >
-              <LectureVideoArea
-                videoUrl={activeLecture?.videoUrl}
-                poster={activeLecture?.thumbnail ?? data.course.thumbnail}
-                isTvMode={isTvMode}
-                onNext={
-                  activeIndex >= 0 && activeIndex < allLectures.length - 1 ? goNext : undefined
-                }
-                onPrev={activeIndex > 0 ? goPrev : undefined}
-                initialTime={activeLecture?.progress?.lastPosition || 0}
-                onProgressUpdate={handleProgressUpdate}
-                initialPlaybackRate={
-                  userSettings
-                    ? parseFloat(userSettings.playbackSpeed)
-                    : isLoadingSettings
-                      ? undefined
-                      : 1.0
-                }
-                onPlaybackRateChange={(rate) =>
-                  updateSettings.mutate({ playbackSpeed: String(rate) })
-                }
-              />
-            </div>
+            {activeLecture && (
+              <div
+                className="w-full shrink-0 overflow-hidden bg-black"
+                style={{ height: "min(56.25vw, 60dvh)" }}
+              >
+                <LectureVideoArea
+                  videoUrl={activeLecture?.videoUrl}
+                  hlsUrl={activeLecture.hlsUrl}
+                  poster={activeLecture?.thumbnail ?? data.course.thumbnail}
+                  isTvMode={isTvMode}
+                  onNext={
+                    activeIndex >= 0 && activeIndex < allLectures.length - 1 ? goNext : undefined
+                  }
+                  onPrev={activeIndex > 0 ? goPrev : undefined}
+                  initialTime={activeLecture?.progress?.lastPosition || 0}
+                  onProgressUpdate={handleProgressUpdate}
+                  initialPlaybackRate={
+                    userSettings
+                      ? parseFloat(userSettings.playbackSpeed)
+                      : isLoadingSettings
+                        ? undefined
+                        : 1.0
+                  }
+                  onPlaybackRateChange={(rate) =>
+                    updateSettings.mutate({ playbackSpeed: String(rate) })
+                  }
+                />
+              </div>
+            )}
 
             {/* Tabs panel (comments, overview, etc.) */}
             <div className="mx-auto w-full max-w-5xl px-4 py-5 md:px-6">

@@ -26,7 +26,8 @@ export interface PlayerLecture {
   title: string;
   slug: string;
   description: string | null;
-  videoUrl: string | null;
+  videoUrl: string;
+  hlsUrl: string;
   thumbnail: string | null;
   duration: number;
   isPreview: boolean;

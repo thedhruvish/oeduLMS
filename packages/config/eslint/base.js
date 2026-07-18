@@ -58,6 +58,7 @@ export const baseConfig = defineConfig(
       "build/**",
       ".next/**",
       ".turbo/**",
+      "cdk.out/**",
     ],
   }
 );

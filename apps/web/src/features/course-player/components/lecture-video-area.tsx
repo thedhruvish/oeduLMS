@@ -1,8 +1,10 @@
 import { DvideoPlayer } from "@oedulms/dvideo";
 import { Film } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface LectureVideoAreaProps {
-  videoUrl: string | null | undefined;
+  videoUrl: string;
+  hlsUrl: string;
   poster?: string | null;
   isTvMode: boolean;
   onNext?: () => void;
@@ -21,6 +23,7 @@ interface LectureVideoAreaProps {
  */
 export function LectureVideoArea({
   videoUrl,
+  hlsUrl,
   poster,
   onNext,
   onPrev,
@@ -29,6 +32,19 @@ export function LectureVideoArea({
   initialPlaybackRate,
   onPlaybackRateChange,
 }: LectureVideoAreaProps) {
+  const [activeUrl, setActiveUrl] = useState(hlsUrl || videoUrl);
+
+  useEffect(() => {
+    setActiveUrl(hlsUrl || videoUrl);
+  }, [hlsUrl, videoUrl]);
+
+  const handlePlayerError = () => {
+    if (hlsUrl && activeUrl === hlsUrl && videoUrl) {
+      console.warn("HLS stream failed to play, falling back to direct videoUrl:", videoUrl);
+      setActiveUrl(videoUrl);
+    }
+  };
+
   if (!videoUrl) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-zinc-950 text-white">
@@ -44,11 +60,13 @@ export function LectureVideoArea({
     <div className="flex h-full w-full items-center justify-center bg-black">
       <DvideoPlayer
         key={videoUrl}
-        src={videoUrl}
+        src={activeUrl}
+
         poster={poster ?? undefined}
         isEnableCinemaMode={false}
         onNext={onNext}
         onPrev={onPrev}
+        onError={handlePlayerError}
         initialTime={initialTime}
         onProgressUpdate={onProgressUpdate}
         initialPlaybackRate={initialPlaybackRate}

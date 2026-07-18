@@ -7,3 +7,4 @@ AGENTS.md
 worker-configuration.d.ts
 ai-memory
 prompts
+cdk.out

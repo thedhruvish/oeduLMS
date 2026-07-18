@@ -26,7 +26,8 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
       },
       {
         name: "description",
-        content: "Master programming languages with expert-led courses. Build real projects. Land your dream job.",
+        content:
+          "Master programming languages with expert-led courses. Build real projects. Land your dream job.",
       },
       {
         name: "keywords",
