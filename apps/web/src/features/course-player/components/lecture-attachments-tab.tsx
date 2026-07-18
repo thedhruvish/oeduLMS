@@ -3,6 +3,7 @@ import { Badge } from "@oedulms/ui/components/badge";
 import { Button } from "@oedulms/ui/components/button";
 import type { LectureResource } from "@/api/course-player";
 import { formatFileSize, getResourceIconLabel } from "../utils";
+import { sanitizeUrl } from "@/lib/helper";
 
 interface LectureAttachmentsTabProps {
   resources: LectureResource[];
@@ -57,7 +58,14 @@ export function LectureAttachmentsTab({ resources }: LectureAttachmentsTabProps)
             <Button
               size="sm"
               variant="outline"
-              render={<a href={resource.url} download target="_blank" rel="noopener noreferrer" />}
+              render={
+                <a
+                  href={sanitizeUrl(resource.url)}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
               nativeButton={false}
             >
               <Download data-icon="inline-start" />

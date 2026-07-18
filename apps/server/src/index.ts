@@ -7,6 +7,7 @@ import { createAuthMiddleware, type BetterAuthInstance } from "evlog/better-auth
 import { evlog } from "evlog/hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 
 import type { AppVariables } from "./types";
 import { apiRouter } from "./router";
@@ -19,6 +20,9 @@ const app = new Hono<AppVariables>();
 
 // Logging middleware
 app.use(evlog());
+
+// Secure Headers
+app.use("*", secureHeaders());
 
 // CORS
 app.use("/*", async (c, next) => {

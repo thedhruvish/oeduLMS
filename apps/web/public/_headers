@@ -1,0 +1,5 @@
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com; connect-src 'self' https://*.dhruvish.in https://dhruvish.in https://9d04cdbbfe22c823d053e2f750ad742c.r2.cloudflarestorage.com https://api.razorpay.com; img-src 'self' data: blob: https://protech-assets.dhruvish.in https://*.dhruvish.in https://dhruvish.in https://*.razorpay.com https://9d04cdbbfe22c823d053e2f750ad742c.r2.cloudflarestorage.com; media-src 'self' blob: https://protech-assets.dhruvish.in https://*.dhruvish.in https://dhruvish.in; frame-src 'self' https://*.youtube.com https://*.youtube-nocookie.com https://api.razorpay.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:;
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

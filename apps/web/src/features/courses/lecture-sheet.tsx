@@ -38,6 +38,7 @@ import { useGetVideoStatus, useReTriggerVideo } from "@/api/video";
 import { uploadFileToS3 } from "@/api/media";
 import { cn } from "@oedulms/ui/lib/utils";
 import { VideoPlayerModal } from "@/features/public/courses/components/video-player-modal";
+import { sanitizeUrl } from "@/lib/helper";
 
 import { DatePickerTime } from "@/components/ui/date-picker-time";
 
@@ -772,7 +773,7 @@ export function LectureSheet({
                             <div className="flex items-center gap-1 shrink-0">
                               {att.url && (
                                 <a
-                                  href={att.url}
+                                  href={sanitizeUrl(att.url)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   download

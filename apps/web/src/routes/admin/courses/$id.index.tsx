@@ -18,6 +18,7 @@ import { Button } from "@oedulms/ui/components/button";
 import { Badge } from "@oedulms/ui/components/badge";
 import { useCourse, useDeleteCourse } from "@/api/courses";
 import { useConfirm } from "@/store/confirm-store";
+import { sanitizeUrl } from "@/lib/helper";
 
 export const Route = createFileRoute("/admin/courses/$id/")({
   component: AdminCourseDetailComponent,
@@ -174,7 +175,7 @@ function AdminCourseDetailComponent() {
                   Trailer Video
                 </span>
                 <a
-                  href={course.trailerVideo}
+                  href={sanitizeUrl(course.trailerVideo)}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
