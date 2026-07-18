@@ -26,8 +26,9 @@ export const cacheService: CacheService = {
     ttlSeconds: number
   ): Promise<void> => {
     if (!c.env.PROTECH_KV) return;
+    const expirationTtl = ttlSeconds < 60 ? 60 : ttlSeconds;
     await c.env.PROTECH_KV.put(key, JSON.stringify(value), {
-      expirationTtl: ttlSeconds,
+      expirationTtl,
     });
   },
 

@@ -25,7 +25,11 @@ export function createAuth(env?: Record<string, unknown>) {
           return await authKv.get(key);
         },
         set: async (key: string, value: string, ttl?: number) => {
-          const options = ttl ? { expirationTtl: ttl } : undefined;
+          let expirationTtl = ttl;
+          if (expirationTtl !== undefined && expirationTtl < 60) {
+            expirationTtl = 600; // Cloudflare KV expiration_ttl must be at least 60 seconds
+          }
+          const options = expirationTtl ? { expirationTtl } : undefined;
           await authKv.put(key, value, options);
         },
         delete: async (key: string) => {
@@ -83,7 +87,7 @@ export function createAuth(env?: Record<string, unknown>) {
     },
     advanced: {
       ipAddress: {
-          ipAddressHeaders: ["cf-connecting-ip"], 
+        ipAddressHeaders: ["cf-connecting-ip"],
       },
       defaultCookieAttributes: {
         sameSite: "none",
