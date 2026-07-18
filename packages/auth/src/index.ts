@@ -69,6 +69,7 @@ export function createAuth(env?: Record<string, unknown>) {
       enabled: true,
       window: 60,
       max: 100,
+      storage: "secondary-storage",
       customRules: {
         "/send-verification-email": {
           window: 60,
@@ -81,6 +82,9 @@ export function createAuth(env?: Record<string, unknown>) {
       },
     },
     advanced: {
+      ipAddress: {
+          ipAddressHeaders: ["cf-connecting-ip"], 
+      },
       defaultCookieAttributes: {
         sameSite: "none",
         secure: true,

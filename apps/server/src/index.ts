@@ -40,16 +40,21 @@ app.use("/*", async (c, next) => {
 
 // Identify user for logging (does not block requests)
 app.use("*", async (c, next) => {
-  const identifyUser = createAuthMiddleware(createAuth(c.env as unknown as Record<string, unknown>) as BetterAuthInstance, {
-    exclude: ["/api/auth/**"],
-    maskEmail: true,
-  });
+  const identifyUser = createAuthMiddleware(
+    createAuth(c.env as unknown as Record<string, unknown>) as BetterAuthInstance,
+    {
+      exclude: ["/api/auth/**"],
+      maskEmail: true,
+    }
+  );
   await identifyUser(c.get("log"), c.req.raw.headers, c.req.path);
   await next();
 });
 
 // Public auth routes (Better Auth)
-app.on(["POST", "GET"], "/api/auth/*", (c) => createAuth(c.env as unknown as Record<string, unknown>).handler(c.req.raw));
+app.on(["POST", "GET"], "/api/auth/*", (c) =>
+  createAuth(c.env as unknown as Record<string, unknown>).handler(c.req.raw)
+);
 
 // Public /api/me route (used by the frontend to get the current session)
 app.get("/api/me", async (c) => {

@@ -270,7 +270,8 @@ function AdminSettingsComponent() {
                                 currentLocation.city &&
                                 currentLocation.country ? (
                                   <span>
-                                    {currentLocation.city}, {currentLocation.country} (Cloudflare CDN)
+                                    {currentLocation.city}, {currentLocation.country} (Cloudflare
+                                    CDN)
                                   </span>
                                 ) : (
                                   <IpLocation ip={sess.ipAddress} />

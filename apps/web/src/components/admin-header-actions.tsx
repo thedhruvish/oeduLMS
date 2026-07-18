@@ -1,11 +1,11 @@
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { 
-  Search, 
-  LogOut, 
-  BookOpen, 
-  Users, 
-  GraduationCap, 
+import {
+  Search,
+  LogOut,
+  BookOpen,
+  Users,
+  GraduationCap,
   LayoutDashboard,
   Ticket,
   Settings,

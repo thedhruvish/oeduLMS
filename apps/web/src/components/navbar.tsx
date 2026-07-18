@@ -199,9 +199,12 @@ export function Navbar() {
                       ].join(" ")}
                     >
                       {"icon" in link &&
-                        React.createElement(link.icon as React.ComponentType<{ className?: string }>, {
-                          className: "size-4 mr-2 shrink-0",
-                        })}
+                        React.createElement(
+                          link.icon as React.ComponentType<{ className?: string }>,
+                          {
+                            className: "size-4 mr-2 shrink-0",
+                          }
+                        )}
                       {link.label}
                     </Link>
                   </motion.div>

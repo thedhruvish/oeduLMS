@@ -45,10 +45,9 @@ if (!rootElement) {
   throw new Error("Root element not found");
 }
 
-
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
-  
+
   // Prime auth session query cache before mounting to prevent initial route pending flash
   queryClient.ensureQueryData(authQueryOptions).finally(() => {
     root.render(

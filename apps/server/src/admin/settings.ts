@@ -4,6 +4,8 @@ import { systemSettings } from "@oedulms/db/schema/profiles";
 import { session } from "@oedulms/db/schema/auth";
 import { eq, and } from "@oedulms/db/dzl";
 import type { AppVariables } from "../types";
+import { CACHE_KEYS } from "../utils/cache-keys";
+import { cacheService } from "../utils/cache";
 
 export const adminSettingsRouter = new Hono<AppVariables>();
 
@@ -104,6 +106,19 @@ adminSettingsRouter.post("/sessions/revoke", async (c) => {
     }
 
     const db = createDb();
+
+    // Fetch the session token to invalidate its cached user session
+    const sessionToRevoke = await db
+      .select({ token: session.token })
+      .from(session)
+      .where(and(eq(session.id, id), eq(session.userId, sessionUser.id)))
+      .limit(1);
+
+    if (sessionToRevoke[0]) {
+      const cacheKey = CACHE_KEYS.USER_SESSION(sessionToRevoke[0].token);
+      await cacheService.delete(c, cacheKey);
+    }
+
     await db.delete(session).where(and(eq(session.id, id), eq(session.userId, sessionUser.id)));
 
     return c.json({ success: true });

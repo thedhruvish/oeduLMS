@@ -4,7 +4,7 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "oedulms-server",
+	"name": "api-protech",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-07-02",
 	"observability": {
@@ -17,7 +17,7 @@
 	"kv_namespaces": [
 		{
 			"binding": "PROTECH_KV",
-			"id": "e9a0da16b3f2ea29ad30f803c0ad78a1"
+			"id": "10e0a99ab2d042d1b080b32a0bd6c5e8"
 		}
 	]
 	/**

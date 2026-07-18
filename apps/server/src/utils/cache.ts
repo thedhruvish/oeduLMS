@@ -19,7 +19,12 @@ export const cacheService: CacheService = {
     }
   },
 
-  set: async <T>(c: Context<AppVariables>, key: string, value: T, ttlSeconds: number): Promise<void> => {
+  set: async <T>(
+    c: Context<AppVariables>,
+    key: string,
+    value: T,
+    ttlSeconds: number
+  ): Promise<void> => {
     if (!c.env.PROTECH_KV) return;
     await c.env.PROTECH_KV.put(key, JSON.stringify(value), {
       expirationTtl: ttlSeconds,
