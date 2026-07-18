@@ -93,6 +93,7 @@ dashCoursesRouter.get("/:courseId", async (c) => {
             slug: true,
             description: true,
             videoUrl: true,
+            hlsUrl: true,
             thumbnail: true,
             duration: true,
             isPreview: true,
@@ -158,6 +159,7 @@ dashCoursesRouter.get("/:courseId", async (c) => {
           videoUrl: lecture.videoUrl,
           thumbnail: lecture.thumbnail,
           duration: lecture.duration,
+          hlsUrl: lecture.hlsUrl,
           isPreview: lecture.isPreview,
           position: lecture.position,
           resources: lecture.resources.map((r) => ({
