@@ -178,7 +178,7 @@ export class VideoPipelineStack extends cdk.Stack {
     // ── 8. Lambda: Trigger ────────────────────────────────────────────────────
     const triggerFn = new lambda.Function(this, "TriggerLambda", {
       functionName: "oedulms-video-trigger",
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       code: lambda.Code.fromAsset("../../apps/aws-lambda-trigger/dist"),
       handler: "index.triggerHandler",
       timeout: cdk.Duration.minutes(2),
@@ -190,7 +190,7 @@ export class VideoPipelineStack extends cdk.Stack {
     // ── 9. Lambda: Callback ───────────────────────────────────────────────────
     const callbackFn = new lambda.Function(this, "CallbackLambda", {
       functionName: "oedulms-video-callback",
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       code: lambda.Code.fromAsset("../../apps/aws-lambda-trigger/dist"),
       handler: "index.callbackHandler",
       timeout: cdk.Duration.minutes(5),
@@ -202,7 +202,7 @@ export class VideoPipelineStack extends cdk.Stack {
     // ── 10. Lambda: Status (called by CF Worker admin endpoint) ───────────────
     const statusFn = new lambda.Function(this, "StatusLambda", {
       functionName: "oedulms-video-status",
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       code: lambda.Code.fromAsset("../../apps/aws-lambda-trigger/dist"),
       handler: "index.statusHandler",
       timeout: cdk.Duration.seconds(10),
@@ -214,7 +214,7 @@ export class VideoPipelineStack extends cdk.Stack {
     // ── 11. Lambda: Spot Interruption ────────────────────────────────────
     const spotFn = new lambda.Function(this, "SpotInterruptionLambda", {
       functionName: "oedulms-spot-interruption",
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       code: lambda.Code.fromAsset("../../apps/aws-lambda-trigger/dist"),
       handler: "index.spotInterruptionHandler",
       timeout: cdk.Duration.seconds(30),
