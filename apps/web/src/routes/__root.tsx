@@ -10,6 +10,7 @@ import { DynamicThemeProvider } from "@/components/dynamic-theme-provider";
 import type { QueryClient } from "@tanstack/react-query";
 import type { AuthContextType } from "@/types/auth";
 import NotFound from "@/components/not-found";
+import { DefaultErrorComponent } from "@/components/error-component";
 
 export interface RouterAppContext {
   auth?: AuthContextType;
@@ -19,6 +20,7 @@ export interface RouterAppContext {
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
   notFoundComponent: NotFound,
+  errorComponent: DefaultErrorComponent,
   head: () => ({
     meta: [
       {

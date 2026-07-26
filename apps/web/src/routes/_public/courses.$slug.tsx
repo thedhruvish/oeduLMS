@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
+import { isAxiosError } from "axios";
 import { CourseDetailPage } from "@/features/public/courses/course-detail-page";
 import {
   publicCourseDetailQueryOptions,
@@ -8,11 +9,18 @@ import {
 
 export const Route = createFileRoute("/_public/courses/$slug")({
   loader: async ({ params: { slug }, context: { queryClient } }) => {
-    await Promise.all([
-      queryClient.ensureQueryData(publicCourseDetailQueryOptions(slug)),
-      queryClient.ensureQueryData(publicCourseCurriculumQueryOptions(slug)),
-      queryClient.ensureQueryData(publicCourseFaqsQueryOptions(slug)),
-    ]);
+    try {
+      await Promise.all([
+        queryClient.ensureQueryData(publicCourseDetailQueryOptions(slug)),
+        queryClient.ensureQueryData(publicCourseCurriculumQueryOptions(slug)),
+        queryClient.ensureQueryData(publicCourseFaqsQueryOptions(slug)),
+      ]);
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 404) {
+        throw notFound();
+      }
+      throw error;
+    }
   },
   component: CourseDetailPage,
 });

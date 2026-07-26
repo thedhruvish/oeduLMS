@@ -12,7 +12,7 @@ export function getPublicRouteTree() {
   const ssgRoot = createRootRouteWithContext<RouterAppContext>()({
     component: rootRoute.options.component,
     notFoundComponent: rootRoute.options.notFoundComponent,
-    head: rootRoute.options.head,
+    head: rootRoute.options.head as unknown as undefined,
   });
 
   const ssgLayout = createRoute({
@@ -25,35 +25,35 @@ export function getPublicRouteTree() {
     getParentRoute: () => ssgLayout,
     path: "/",
     component: indexRoute.options.component,
-    loader: indexRoute.options.loader,
+    loader: indexRoute.options.loader as unknown as undefined,
   });
 
   const ssgHome = createRoute({
     getParentRoute: () => ssgLayout,
     path: "/home",
     component: homeRoute.options.component,
-    loader: homeRoute.options.loader,
+    loader: homeRoute.options.loader as unknown as undefined,
   });
 
   const ssgAbout = createRoute({
     getParentRoute: () => ssgLayout,
     path: "/about",
     component: aboutRoute.options.component,
-    loader: aboutRoute.options.loader,
+    loader: aboutRoute.options.loader as unknown as undefined,
   });
 
   const ssgCoursesIndex = createRoute({
     getParentRoute: () => ssgLayout,
     path: "/courses",
     component: coursesIndexRoute.options.component,
-    loader: coursesIndexRoute.options.loader,
+    loader: coursesIndexRoute.options.loader as unknown as undefined,
   });
 
   const ssgCoursesSlug = createRoute({
     getParentRoute: () => ssgLayout,
     path: "/courses/$slug",
     component: coursesSlugRoute.options.component,
-    loader: coursesSlugRoute.options.loader,
+    loader: coursesSlugRoute.options.loader as unknown as undefined,
   });
 
   return ssgRoot.addChildren([
