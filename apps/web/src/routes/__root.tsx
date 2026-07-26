@@ -47,7 +47,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 function RootComponent() {
   return (
     <>
-      <HeadContent />
+      {typeof window !== "undefined" && <HeadContent />}
       <ThemeProvider
         attribute="class"
         defaultTheme="dark"
@@ -62,7 +62,7 @@ function RootComponent() {
           </TooltipProvider>
         </DynamicThemeProvider>
       </ThemeProvider>
-      <TanStackRouterDevtools position="bottom-left" />
+      {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-left" />}
     </>
   );
 }

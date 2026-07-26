@@ -43,3 +43,10 @@ Select a module below to view detailed technical specifications and flows:
 - Client state management (TanStack Query query key factories).
 - Headless forms and validator bindings (TanStack Form + Zod).
 - Custom UI extensions (Premium Video Player, dialog systems).
+
+### 7. [SSG & Pre-rendering Architecture](./ssg-and-prerendering.md)
+
+- Pre-rendering pipeline using live backend API endpoints (`scripts/prerender.ts`).
+- React Query state dehydration (`window.__REACT_QUERY_STATE__`) & client hydration.
+- Stale-While-Revalidate (SWR) dynamic data updating without full rebuilds.
+- Dual static routing output (`.html` and `/index.html`) & HTML sanitization.

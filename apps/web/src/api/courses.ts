@@ -132,58 +132,74 @@ export function useDeleteCourse() {
   });
 }
 
+export const publicCoursesQueryOptions = {
+  queryKey: ["public-courses"],
+  queryFn: async (): Promise<PublicCourse[]> => {
+    const { data } = await axiosClient.get<PublicCourse[]>("/public/courses");
+    return (data || []).map((c) => ({
+      ...c,
+      price: c.price / 100,
+      discountPrice: c.discountPrice ? c.discountPrice / 100 : null,
+    }));
+  },
+  staleTime: 60 * 1000, // Stale-while-revalidate: Instant SSG display + background fresh data check
+  gcTime: 30 * 60 * 1000,
+};
+
+export const publicCourseDetailQueryOptions = (idOrSlug: string) => ({
+  queryKey: ["public-course-detail", idOrSlug],
+  queryFn: async (): Promise<PublicCourseDetail> => {
+    const { data } = await axiosClient.get<PublicCourseDetail>(`/public/courses/${idOrSlug}`);
+    return {
+      ...data,
+      price: data.price / 100,
+      discountPrice: data.discountPrice ? data.discountPrice / 100 : null,
+    };
+  },
+  enabled: !!idOrSlug,
+  retry: false,
+  staleTime: 10 * 60 * 1000, // 10 minutes
+  gcTime: 30 * 60 * 1000,
+});
+
 export function usePublicCourses() {
-  return useQuery<PublicCourse[]>({
-    queryKey: ["public-courses"],
-    queryFn: async () => {
-      const { data } = await axiosClient.get<PublicCourse[]>("/public/courses");
-      return data.map((c) => ({
-        ...c,
-        price: c.price / 100, // convert cents → dollars
-        discountPrice: c.discountPrice ? c.discountPrice / 100 : null,
-      }));
-    },
-  });
+  return useQuery<PublicCourse[]>(publicCoursesQueryOptions);
 }
 
 export function usePublicCourseDetails(idOrSlug: string) {
-  return useQuery<PublicCourseDetail>({
-    queryKey: ["public-course-detail", idOrSlug],
-    queryFn: async () => {
-      const { data } = await axiosClient.get<PublicCourseDetail>(`/public/courses/${idOrSlug}`);
-      return {
-        ...data,
-        price: data.price / 100, // convert cents → dollars
-        discountPrice: data.discountPrice ? data.discountPrice / 100 : null,
-      };
-    },
-    enabled: !!idOrSlug,
-    retry: false,
-  });
+  return useQuery<PublicCourseDetail>(publicCourseDetailQueryOptions(idOrSlug));
 }
 
+export const publicCourseCurriculumQueryOptions = (idOrSlug: string) => ({
+  queryKey: ["public-course-curriculum", idOrSlug],
+  queryFn: async (): Promise<PublicSection[]> => {
+    const { data } = await axiosClient.get<PublicSection[]>(
+      `/public/courses/${idOrSlug}/curriculum`
+    );
+    return data || [];
+  },
+  enabled: !!idOrSlug,
+  retry: false,
+  staleTime: 10 * 60 * 1000, // 10 minutes
+  gcTime: 30 * 60 * 1000,
+});
+
+export const publicCourseFaqsQueryOptions = (idOrSlug: string) => ({
+  queryKey: ["public-course-faqs", idOrSlug],
+  queryFn: async (): Promise<PublicFaq[]> => {
+    const { data } = await axiosClient.get<PublicFaq[]>(`/public/courses/${idOrSlug}/faqs`);
+    return data || [];
+  },
+  enabled: !!idOrSlug,
+  retry: false,
+  staleTime: 10 * 60 * 1000, // 10 minutes
+  gcTime: 30 * 60 * 1000,
+});
+
 export function usePublicCourseCurriculum(idOrSlug: string) {
-  return useQuery<PublicSection[]>({
-    queryKey: ["public-course-curriculum", idOrSlug],
-    queryFn: async () => {
-      const { data } = await axiosClient.get<PublicSection[]>(
-        `/public/courses/${idOrSlug}/curriculum`
-      );
-      return data;
-    },
-    enabled: !!idOrSlug,
-    retry: false,
-  });
+  return useQuery<PublicSection[]>(publicCourseCurriculumQueryOptions(idOrSlug));
 }
 
 export function usePublicCourseFaqs(idOrSlug: string) {
-  return useQuery<PublicFaq[]>({
-    queryKey: ["public-course-faqs", idOrSlug],
-    queryFn: async () => {
-      const { data } = await axiosClient.get<PublicFaq[]>(`/public/courses/${idOrSlug}/faqs`);
-      return data;
-    },
-    enabled: !!idOrSlug,
-    retry: false,
-  });
+  return useQuery<PublicFaq[]>(publicCourseFaqsQueryOptions(idOrSlug));
 }

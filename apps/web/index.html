@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,13 +9,11 @@
         var savedTheme = localStorage.getItem("vite-ui-theme") || "dark";
         var isDark = savedTheme === "dark" || (savedTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.classList.toggle("dark", isDark);
-        document.documentElement.style.backgroundColor = isDark ? "#09090b" : "#ffffff";
-        document.documentElement.style.color = isDark ? "#fafafa" : "#09090b";
       })();
     </script>
   </head>
 
-  <body>
+  <body class="bg-background text-foreground antialiased min-h-screen">
     <div id="app"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

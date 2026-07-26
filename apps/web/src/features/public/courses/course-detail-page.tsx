@@ -106,7 +106,7 @@ export function CourseDetailPage() {
             </section>
 
             {/* Curriculum (circular) */}
-            <CourseCurriculum courseIdOrSlug={course.id} />
+            <CourseCurriculum courseIdOrSlug={slug} />
 
             {/* Instructions */}
             <section>
@@ -132,7 +132,7 @@ export function CourseDetailPage() {
             </section>
 
             {/* FAQs */}
-            <CourseFaqs courseIdOrSlug={course.id} />
+            <CourseFaqs courseIdOrSlug={slug} />
           </div>
 
           {/* Right: Checkout Sidebar Widget */}

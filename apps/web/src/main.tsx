@@ -1,12 +1,23 @@
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import ReactDOM from "react-dom/client";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, hydrate } from "@tanstack/react-query";
 
 import Loader from "./components/loader";
 import { routeTree } from "./routeTree.gen";
 import { queryClient } from "@/lib/query-client";
 import { useAuth, authQueryOptions } from "@/api/auth";
 import type { AuthContextType } from "@/types/auth";
+
+// Hydrate pre-fetched React Query state from SSG html if present
+if (typeof window !== "undefined" && (window as any).__REACT_QUERY_STATE__) {
+  hydrate(queryClient, (window as any).__REACT_QUERY_STATE__);
+}
+
+// Automatically clean trailing /index.html from URL path in browser before router initialization
+if (typeof window !== "undefined" && window.location.pathname.endsWith("/index.html")) {
+  const cleanPath = window.location.pathname.replace(/\/index\.html$/, "") || "/";
+  window.history.replaceState(null, "", cleanPath + window.location.search + window.location.hash);
+}
 
 const router = createRouter({
   routeTree,
@@ -45,15 +56,17 @@ if (!rootElement) {
   throw new Error("Root element not found");
 }
 
-if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement);
+const appContent = (
+  <QueryClientProvider client={queryClient}>
+    <App />
+  </QueryClientProvider>
+);
 
-  // Prime auth session query cache before mounting to prevent initial route pending flash
-  queryClient.ensureQueryData(authQueryOptions).finally(() => {
-    root.render(
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
-    );
-  });
+if (rootElement.innerHTML.trim()) {
+  ReactDOM.hydrateRoot(rootElement, appContent);
+} else {
+  ReactDOM.createRoot(rootElement).render(appContent);
 }
+
+// Prime auth query cache in background without delaying hydration
+queryClient.ensureQueryData(authQueryOptions).catch(() => {});
