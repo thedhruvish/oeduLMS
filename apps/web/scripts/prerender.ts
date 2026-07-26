@@ -61,7 +61,7 @@ async function runPrerender() {
     process.exit(1);
   }
 
-  const serverUrl = process.env.VITE_SERVER_URL || "http://localhost:8787";
+  const serverUrl = process.env.VITE_SERVER_URL || "https://api-protech.dhruvish.in";
   const coursesApiUrl = `${serverUrl}/api/public/courses`;
   console.log(`🔍 Fetching course list from API: ${coursesApiUrl}`);
 
@@ -76,6 +76,22 @@ async function runPrerender() {
     }
   } catch {
     console.warn(`⚠️ Could not connect to API at ${coursesApiUrl}.`);
+  }
+
+  // Fallback to production worker API if local API fails or returns no courses
+  if (apiCourses.length === 0 && serverUrl !== "https://api-protech.dhruvish.in") {
+    const prodServerUrl = "https://api-protech.dhruvish.in";
+    const prodCoursesApiUrl = `${prodServerUrl}/api/public/courses`;
+    console.log(`🔍 Falling back to production API: ${prodCoursesApiUrl}`);
+    try {
+      const res = await fetch(prodCoursesApiUrl);
+      if (res.ok) {
+        apiCourses = (await res.json()) as Array<{ id: string; title: string; slug: string }>;
+        console.log(`✅ Retrieved ${apiCourses.length} course(s) from production API.`);
+      }
+    } catch (err) {
+      console.warn(`⚠️ Could not connect to production API at ${prodCoursesApiUrl}.`, err);
+    }
   }
 
   const pages: PageConfig[] = [
@@ -247,6 +263,12 @@ async function runPrerender() {
     console.log(`  ✓ Prerendered ${page.url} → ${path.relative(webDir, targetFile)}`);
     count++;
   }
+
+  // Generate 404.html fallback and _redirects for Cloudflare Pages & Netlify SPA routing
+  const rootIndexHtml = await fs.readFile(path.join(distDir, "index.html"), "utf-8");
+  await fs.writeFile(path.join(distDir, "404.html"), rootIndexHtml, "utf-8");
+  await fs.writeFile(path.join(distDir, "_redirects"), "/*  /index.html  200\n", "utf-8");
+  console.log(`  ✓ Generated 404.html fallback & _redirects for Cloudflare Pages`);
 
   console.log(`\n🎉 Successfully prerendered ${count} public pages at build time!`);
   process.exit(0);
