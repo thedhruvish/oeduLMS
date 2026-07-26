@@ -8,9 +8,11 @@ import { queryClient } from "@/lib/query-client";
 import { useAuth, authQueryOptions } from "@/api/auth";
 import type { AuthContextType } from "@/types/auth";
 
+import "@/types/global.d.ts";
+
 // Hydrate pre-fetched React Query state from SSG html if present
-if (typeof window !== "undefined" && (window as any).__REACT_QUERY_STATE__) {
-  hydrate(queryClient, (window as any).__REACT_QUERY_STATE__);
+if (typeof window !== "undefined" && window.__REACT_QUERY_STATE__) {
+  hydrate(queryClient, window.__REACT_QUERY_STATE__);
 }
 
 // Automatically clean trailing /index.html from URL path in browser before router initialization

@@ -6,16 +6,25 @@ import React from "react";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { QueryClientProvider, dehydrate } from "@tanstack/react-query";
 
+interface GlobalWindowPolyfill {
+  window?: unknown;
+  matchMedia?: (query: string) => MediaQueryList;
+}
+
 // Global DOM & Window polyfill for SSG Node/Bun environment
 if (typeof window === "undefined") {
-  (globalThis as any).window = globalThis;
+  const globalObj = globalThis as unknown as GlobalWindowPolyfill;
+  globalObj.window = globalThis;
   if (!globalThis.window.matchMedia) {
-    (globalThis.window as any).matchMedia = () => ({
+    globalThis.window.matchMedia = () => ({
       matches: false,
+      media: "",
+      onchange: null,
       addListener: () => {},
       removeListener: () => {},
       addEventListener: () => {},
       removeEventListener: () => {},
+      dispatchEvent: () => false,
     });
   }
 }
@@ -152,13 +161,28 @@ async function runPrerender() {
     await router.load();
 
     // Preload component chunks for matched routes
+    interface PreloadableComponent {
+      preload?: () => Promise<unknown>;
+    }
+    interface PreloadableRouteMatch {
+      component?: PreloadableComponent;
+      routeComponent?: PreloadableComponent;
+      route?: {
+        options?: {
+          component?: PreloadableComponent;
+          lazy?: PreloadableComponent;
+        };
+      };
+    }
+
     await Promise.all(
-      (router.state.matches || []).map(async (match) => {
+      (router.state.matches || []).map(async (rawMatch) => {
+        const match = rawMatch as PreloadableRouteMatch;
         const comps = [
-          (match as any)?.component,
-          (match as any)?.routeComponent,
-          (match as any)?.route?.options?.component,
-          (match as any)?.route?.options?.lazy,
+          match?.component,
+          match?.routeComponent,
+          match?.route?.options?.component,
+          match?.route?.options?.lazy,
         ];
         for (const comp of comps) {
           if (comp && typeof comp.preload === "function") {
@@ -225,6 +249,7 @@ async function runPrerender() {
   }
 
   console.log(`\n🎉 Successfully prerendered ${count} public pages at build time!`);
+  process.exit(0);
 }
 
 runPrerender().catch((err) => {
