@@ -1,0 +1,57 @@
+name: ⚡ Performance Issue
+description: Report a performance bottleneck, memory issue, slow query, or build regression.
+title: "perf: "
+labels: ["performance", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to report performance issues or bottlenecks in runtime execution, API response times, frontend rendering, or build speeds.
+
+  - type: dropdown
+    id: performance_domain
+    attributes:
+      label: Performance Domain
+      options:
+        - "Backend API Latency / Slow Response"
+        - "Database Query Performance / Indexing"
+        - "Frontend Rendering / Core Web Vitals"
+        - "Build / Bundle Size & Static Generation"
+        - "Memory Usage / Connection Leaks"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description of the Performance Problem
+      description: Describe what is slow, inefficient, or consuming excessive resources.
+      placeholder: When fetching large course catalogues, the query takes > 500ms...
+    validations:
+      required: true
+
+  - type: textarea
+    id: metrics_or_reproduction
+    attributes:
+      label: Metrics, Benchmarks, or Reproduction Steps
+      description: Provide profiling data, benchmark results, logs, or reproduction steps.
+      placeholder: |
+        - Endpoint: GET /api/courses
+        - Average latency: ~450ms
+        - Profiling log / flamegraph:
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_optimization
+    attributes:
+      label: Proposed Optimization
+      description: Do you have a suggestion for improving performance?
+      placeholder: Add an index on column X, or memoize component Y...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to submit a Pull Request to optimize this.

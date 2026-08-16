@@ -1,0 +1,60 @@
+name: 🛠️ Tooling & Developer Experience
+description: Report issues or suggest improvements with local development, scripts, Docker, or Turborepo.
+title: "chore: "
+labels: ["tooling", "dx", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for problems or enhancement suggestions regarding development tooling, local environment, Docker Compose, scripts, or CI automation.
+
+  - type: dropdown
+    id: tool_area
+    attributes:
+      label: Tooling Area
+      options:
+        - "Docker Compose / PostgreSQL Service"
+        - "Turborepo Pipeline / Task Caching"
+        - "pnpm / Package Manager / Workspaces"
+        - "ESLint / Prettier / Code Quality Tooling"
+        - "TypeScript / tsconfig Compilation"
+        - "Database Migrations & Seed Scripts"
+        - "GitHub Actions CI Workflows"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: Problem or Friction Encountered
+      description: Describe the friction, failure, or DX limitation you encountered.
+      placeholder: When running 'pnpm db:reset', on platform X it errors with...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_improvement
+    attributes:
+      label: Proposed Solution or Tooling Improvement
+      description: How could we improve this workflow or configuration?
+      placeholder: Update the package script to pass flag Y or adjust config Z...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Info
+      description: Include your OS and runtime tool versions.
+      value: |
+        - OS: 
+        - Node version: 
+        - pnpm version: 
+        - Docker version: 
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to submit a Pull Request to fix or improve this tooling.

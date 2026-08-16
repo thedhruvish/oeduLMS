@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Security Vulnerability Report
+    url: mailto:security@veolms.org
+    about: Please report security vulnerabilities directly via private email. Do NOT open public issues.
+  - name: 💬 Community Discussions & Questions
+    url: https://github.com/veolms/veolms/discussions
+    about: Ask general questions, discuss ideas, or seek support from the community.

@@ -1,0 +1,55 @@
+name: ✨ Feature Request
+description: Propose a new feature, enhancement, or architectural idea for VeoLMS.
+title: "feat: "
+labels: ["enhancement", "proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for proposing an enhancement to VeoLMS! Please provide as much context as possible.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement / Motivation
+      description: Is your feature request related to a problem or limitation? Please describe clearly.
+      placeholder: I am always frustrated when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution / Enhancement
+      description: Describe the solution you'd like to see implemented.
+      placeholder: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions or features you've considered.
+      placeholder: Any other ways this could be handled?
+
+  - type: dropdown
+    id: target_area
+    attributes:
+      label: Target Area
+      options:
+        - "Web Application (apps/web)"
+        - "API Service (apps/api)"
+        - "Database & Data Models (packages/database)"
+        - "Shared Contracts (packages/contracts)"
+        - "Developer Experience & Tooling"
+        - "Documentation"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Contribution Willingness
+      options:
+        - label: I would be interested in submitting a Pull Request to implement this feature.

@@ -1,0 +1,57 @@
+name: 📖 Documentation Improvement
+description: Suggest improvements, report outdated content, or request new documentation.
+title: "docs: "
+labels: ["documentation", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve VeoLMS documentation!
+        Please review the existing [Docs Index](https://github.com/veolms/veolms/blob/development/docs/README.md) to check related sections.
+
+  - type: input
+    id: doc_location
+    attributes:
+      label: Documentation Page / File
+      description: Provide the path or URL to the documentation page (if applicable).
+      placeholder: e.g., docs/development.md, docs/contribution/getting-started.md
+    validations:
+      required: false
+
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: Type of Documentation Issue
+      options:
+        - "Outdated or inaccurate instructions"
+        - "Missing documentation / guide for a feature"
+        - "Confusing or unclear explanation"
+        - "Broken link or markdown formatting issue"
+        - "Batched typo and grammatical improvements"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description of the Problem
+      description: What is wrong, outdated, or missing in the documentation?
+      placeholder: The setup instructions in section X do not mention...
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested_fix
+    attributes:
+      label: Suggested Content or Correction
+      description: How should this documentation be improved or rewritten?
+      placeholder: It would be clearer if we explained...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to submit a Pull Request to fix or write this documentation.

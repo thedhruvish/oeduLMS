@@ -1,0 +1,59 @@
+name: ♻️ Refactoring & Technical Debt
+description: Propose code cleanup, architecture restructuring, or technical debt reduction.
+title: "refactor: "
+labels: ["refactor", "tech-debt", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to propose internal codebase improvements that do NOT introduce new user-facing features or alter external API behavior.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Target Component
+      options:
+        - "apps/web (Frontend)"
+        - "apps/api (Backend API)"
+        - "packages/database (Database layer / Queries)"
+        - "packages/contracts (Shared contracts & schemas)"
+        - "packages/config (Configuration validation)"
+        - "Global / Workspace architecture"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_state
+    attributes:
+      label: Current Implementation & Pain Points
+      description: What is suboptimal or difficult to maintain with the existing code structure?
+      placeholder: Currently, module X handles both A and B, which leads to tight coupling...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_refactoring
+    attributes:
+      label: Proposed Solution / Restructuring
+      description: Describe how the code should be reorganized, simplified, or refactored.
+      placeholder: Extract helper Y into package Z and replace duplicated queries with...
+    validations:
+      required: true
+
+  - type: textarea
+    id: benefits_and_risks
+    attributes:
+      label: Benefits & Potential Risks
+      description: What are the expected benefits (maintainability, testability, readability) and potential regression risks?
+      placeholder: |
+        - Benefits: Reduces duplication, improves type inference.
+        - Risks: None expected, existing unit tests should continue passing.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to submit a Pull Request to implement this refactor.
